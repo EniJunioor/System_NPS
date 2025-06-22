@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Necessário para o NeonDB
+}
+
+enum UserRole {
+  ADMIN
+  GESTOR
+  ATENDENTE
+  CLIENTE
+}
+
+enum TicketStatus {
+  ABERTO
+  EM_ANDAMENTO
+  FINALIZADO
+  AGUARDANDO_ATENDIMENTO
+  AGUARDANDO_CLIENTE
+  CANCELADO
+}
+
+enum TicketUrgency {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum TicketCategory {
+  DUVIDA
+  INCIDENTE
+  SOLICITACAO
+  MELHORIA
+}
+
+enum TaskStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+  EM_ESPERA
+}
+
+enum TaskPriority {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+enum TaskTag {
+  TREINAMENTO
+  IMPLANTACAO
+  SUPORTE_TECNICO
+  DESENVOLVIMENTO
+  MANUTENCAO
+  DOCUMENTACAO
+  REUNIAO
+}
+
+enum NotificationType {
+  NOVO_TICKET
+  TICKET_ATRIBUIDO
+  TICKET_ATUALIZADO
+  NOVA_TAREFA
+  TAREFA_ATRIBUIDA
+  TAREFA_CONCLUIDA
+  AVALIACAO_RECEBIDA
+  MENCAO
+}
+
+model User {
+  id               String    @id @default(uuid())
+  nome             String
+  sobrenome        String?
+  email            String    @unique
+  senha            String
+  telefone         String?
+  tipo             UserRole
+  twoFactorEnabled Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relacionamentos
+  ticketsCriados     Ticket[]       @relation("CriadoPor")
+  ticketsAtendidos   Ticket[]       @relation("AtendidoPor")
+  tarefasCriadas     Task[]         @relation("TarefasCriadas")
+  tarefasResponsavel Task[]         @relation("TarefasResponsavel")
+  notifications      Notification[]
+  settings           UserSettings?
+
+  @@map("usuarios")
+}
+
+model UserSettings {
+  id                String   @id @default(uuid())
+  theme             String   @default("light")
+  timezone          String   @default("America/Sao_Paulo")
+  language          String   @default("pt-BR")
+  notificationsOn   Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relacionamento
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@map("configuracoes_usuario")
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  titulo      String
+  descricao   String
+  categoria   TicketCategory
+  tags        String[]
+  urgencia    TicketUrgency
+  anexos      String[]
+  data        DateTime
+  hora        DateTime
+  status      TicketStatus
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relacionamentos
+  criadoPorId String
+  criadoPor   User           @relation("CriadoPor", fields: [criadoPorId], references: [id])
+  atendidoPorId String?
+  atendidoPor   User?          @relation("AtendidoPor", fields: [atendidoPorId], references: [id])
+  token       Token?
+  avaliacao   Avaliacao?
+  tarefas     Task[]
+
+  @@map("tickets")
+}
+
+model Token {
+  id        String   @id @default(uuid())
+  valor     String   @unique
+  usado     Boolean  @default(false)
+  expiraEm  DateTime
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  ticketId  String   @unique
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+
+  @@map("tokens")
+}
+
+model Avaliacao {
+  id          String   @id @default(uuid())
+  sistema     Int      @db.SmallInt
+  atendimento Int      @db.SmallInt
+  comentario  String?
+  createdAt   DateTime @default(now())
+
+  // Relacionamentos
+  ticketId    String   @unique
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+
+  @@map("avaliacoes")
+}
+
+model TokenAvaliacao {
+  id              String   @id @default(uuid())
+  token           String   @unique
+  telefone        String
+  atendente       String
+  dataAtendimento DateTime
+  expiraEm        DateTime
+  usado           Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@map("tokens_avaliacao")
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  titulo         String
+  duracao        String
+  descricao      String
+  tag            TaskTag
+  status         TaskStatus   @default(PENDENTE)
+  prioridade     TaskPriority @default(MEDIA)
+  dataInicio     DateTime?
+  dataVencimento DateTime?
+  projeto        String?
+  sistema        String?
+  anexos         String[]
+  videoUrl       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relacionamentos
+  criadoPorId    String
+  criadoPor      User         @relation("TarefasCriadas", fields: [criadoPorId], references: [id])
+  responsavelId  String?
+  responsavel    User?        @relation("TarefasResponsavel", fields: [responsavelId], references: [id])
+  ticketId       String?
+  ticket         Ticket?      @relation(fields: [ticketId], references: [id])
+
+  @@map("tarefas")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relacionamentos
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@map("notificacoes")
+} 
