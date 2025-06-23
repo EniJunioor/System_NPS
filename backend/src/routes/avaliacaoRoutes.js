@@ -172,17 +172,18 @@ router.post('/', validate(avaliacaoSchema), async (req, res, next) => {
     });
 
     // Marcar token como usado
-    await prisma.token.update({
+    await prisma.tokenAvaliacao.update({
       where: { id: tokenInfo.id },
       data: { usado: true },
     });
 
-    // Opcional: Atualizar o status do ticket para finalizado, se fizer sentido no fluxo
-    await prisma.ticket.update({
-      where: { id: tokenInfo.ticketId },
-      data: { status: 'FINALIZADO' }
-    });
-
+    // Opcional: Atualizar o status do ticket para finalizado, se houver ticketId
+    if (tokenInfo.ticketId) {
+      await prisma.ticket.update({
+        where: { id: tokenInfo.ticketId },
+        data: { status: 'FINALIZADO' }
+      });
+    }
 
     res.status(201).json({
       message: 'Avaliação registrada com sucesso',

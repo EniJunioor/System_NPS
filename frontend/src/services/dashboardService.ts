@@ -220,4 +220,19 @@ export const dashboardService = {
     });
     return response.data;
   },
+
+  // Obter métricas gerais do sistema (tickets, usuários, tokens)
+  async getMetrics(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    tokensGenerated: number;
+    tokensUsed: number;
+    totalTickets: number;
+    pendingTickets: number;
+    resolvedTickets: number;
+    urgentTickets: number;
+  }> {
+    const response = await api.get('/dashboard/metrics');
+    return response.data;
+  },
 }; 

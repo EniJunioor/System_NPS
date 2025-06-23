@@ -10,7 +10,7 @@ export interface RegisterData {
   nome: string;
   email: string;
   senha: string;
-  tipo: 'ADMIN' | 'USER';
+  tipo: 'ADMIN' | 'GESTOR' | 'ATENDENTE' | 'CLIENTE';
 }
 
 export interface AuthResponse {
@@ -76,7 +76,7 @@ export const authService = {
     try {
       const response = await api.get('/auth/validate');
       return { valid: true, user: response.data };
-    } catch (error) {
+    } catch  {
       return { valid: false };
     }
   },

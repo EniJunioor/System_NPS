@@ -1,58 +1,144 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Filter, Eye, Edit, Package, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ticketService } from '../services/ticketService';
+import { dashboardService } from '../services/dashboardService';
+import type { Ticket, TicketFormData } from '../types';
+import TicketForm from '../components/tickets/TicketForm';
+import Modal from '../components/layout/Modal';
 
-const summaryCards = [
-  { label: 'Total', value: 248, icon: Package, color: 'text-blue-500 bg-blue-100' },
-  { label: 'Pendentes', value: 42, icon: Clock, color: 'text-yellow-500 bg-yellow-100' },
-  { label: 'Resolvidos', value: 186, icon: CheckCircle2, color: 'text-green-500 bg-green-100' },
-  { label: 'Urgentes', value: 20, icon: AlertCircle, color: 'text-red-500 bg-red-100' },
+const statusOptions = [
+  { label: 'Todos os status', value: '' },
+  { label: 'Aberto', value: 'ABERTO' },
+  { label: 'Em andamento', value: 'EM_ANDAMENTO' },
+  { label: 'Finalizado', value: 'FINALIZADO' },
+  { label: 'Aguardando Atendimento', value: 'AGUARDANDO_ATENDIMENTO' },
+  { label: 'Aguardando Cliente', value: 'AGUARDANDO_CLIENTE' },
 ];
 
-const tickets = [
-  {
-    id: '#2024-001',
-    title: 'Problema com login',
-    desc: 'Não consigo acessar minha conta',
-    client: { name: 'Ana Silva', email: 'ana@email.com', avatar: 'https://i.pravatar.cc/150?u=ana' },
-    status: 'Em andamento',
-    statusColor: 'bg-yellow-100 text-yellow-800',
-    priority: 'Alta',
-    priorityColor: 'bg-red-100 text-red-600',
-    created: '15/01/2024',
-  },
-  {
-    id: '#2024-002',
-    title: 'Erro na integração',
-    desc: 'API retornando erro 500',
-    client: { name: 'João Santos', email: 'joao@empresa.com', avatar: 'https://i.pravatar.cc/150?u=joao' },
-    status: 'Aberto',
-    statusColor: 'bg-blue-100 text-blue-700',
-    priority: 'Urgente',
-    priorityColor: 'bg-red-500 text-white',
-    created: '14/01/2024',
-  },
-  {
-    id: '#2024-003',
-    title: 'Solicitação de feature',
-    desc: 'Adicionar filtro por data',
-    client: { name: 'Maria Costa', email: 'maria@teste.com', avatar: 'https://i.pravatar.cc/150?u=maria' },
-    status: 'Resolvido',
-    statusColor: 'bg-green-100 text-green-700',
-    priority: 'Baixa',
-    priorityColor: 'bg-gray-100 text-gray-600',
-    created: '13/01/2024',
-  },
+const priorityOptions = [
+  { label: 'Todas as prioridades', value: '' },
+  { label: 'Alta', value: 'alta' },
+  { label: 'Média', value: 'média' },
+  { label: 'Baixa', value: 'baixa' },
 ];
-
-const statusOptions = ['Todos os status', 'Aberto', 'Em andamento', 'Resolvido', 'Urgente'];
-const priorityOptions = ['Todas as prioridades', 'Alta', 'Média', 'Baixa', 'Urgente'];
 
 export default function Tickets() {
-  const [status, setStatus] = useState('Todos os status');
-  const [priority, setPriority] = useState('Todas as prioridades');
+  const [status, setStatus] = useState('');
+  const [priority, setPriority] = useState('');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(2);
+  const [page, setPage] = useState(1);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalResults, setTotalResults] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [summary, setSummary] = useState({
+    total: 0,
+    pendentes: 0,
+    resolvidos: 0,
+    urgentes: 0,
+  });
+ 
+
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const filters: Record<string, string> = {};
+      if (status) filters.status = status;
+      if (priority) filters.urgencia = priority;
+      if (search) filters.search = search;
+      const res = await ticketService.getTickets(page, 10, filters);
+      setTickets(res.tickets);
+      setTotalPages(res.totalPages || 1);
+      setTotalResults(res.total || 0);
+    } catch {
+      setTickets([]);
+      setTotalPages(1);
+      setTotalResults(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+    dashboardService.getMetrics().then((data: {
+      totalTickets: number;
+      pendingTickets: number;
+      resolvedTickets: number;
+      urgentTickets: number;
+    }) => {
+      setSummary({
+        total: data.totalTickets,
+        pendentes: data.pendingTickets,
+        resolvidos: data.resolvedTickets,
+        urgentes: data.urgentTickets,
+      });
+    });
+    // eslint-disable-next-line
+  }, [status, priority, search, page]);
+
+  const openEditModal = async (ticketId: string) => {
+    setModalMode('edit');
+    setModalOpen(true);
+    setLoading(true);
+    const ticket = await ticketService.getTicketById(ticketId);
+    setSelectedTicket(ticket);
+    setLoading(false);
+  };
+  const openViewModal = async (ticketId: string) => {
+    setModalMode('view');
+    setModalOpen(true);
+    setLoading(true);
+    const ticket = await ticketService.getTicketById(ticketId);
+    setSelectedTicket(ticket);
+    setLoading(false);
+  };
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedTicket(null);
+    setModalMode(null);
+  };
+  const handleEditSubmit = async (data: TicketFormData) => {
+    if (!selectedTicket) return;
+    await ticketService.updateTicket(selectedTicket.id, data);
+    closeModal();
+    fetchTickets();
+  };
+
+  // Utilitários para status/prioridade
+  function getStatusColor(status: string) {
+    switch (status) {
+      case 'ABERTO': return 'bg-blue-100 text-blue-700';
+      case 'EM_ANDAMENTO': return 'bg-yellow-100 text-yellow-800';
+      case 'FINALIZADO': return 'bg-green-100 text-green-700';
+      case 'AGUARDANDO_ATENDIMENTO': return 'bg-yellow-100 text-yellow-800';
+      case 'AGUARDANDO_CLIENTE': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  }
+  function getStatusLabel(status: string) {
+    switch (status) {
+      case 'ABERTO': return 'Aberto';
+      case 'EM_ANDAMENTO': return 'Em andamento';
+      case 'FINALIZADO': return 'Finalizado';
+      case 'AGUARDANDO_ATENDIMENTO': return 'Aguardando Atendimento';
+      case 'AGUARDANDO_CLIENTE': return 'Aguardando Cliente';
+      default: return status;
+    }
+  }
+  function getPriorityColor(priority: string) {
+    switch (priority) {
+      case 'baixa': return 'bg-gray-100 text-gray-600';
+      case 'média': return 'bg-yellow-100 text-yellow-800';
+      case 'alta': return 'bg-red-100 text-red-600';
+      case 'urgente': return 'bg-red-500 text-white';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  }
 
   return (
     <div className="w-full p-6 space-y-6 bg-gray-50/30">
@@ -70,17 +156,42 @@ export default function Tickets() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {summaryCards.map(card => (
-          <div key={card.label} className="bg-white p-5 rounded-lg shadow-sm flex items-center gap-4 border border-gray-100">
-            <div className={`p-3 rounded-full ${card.color}`}>
-              <card.icon size={24} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">{card.label}</p>
-              <p className="text-2xl font-bold text-gray-800">{card.value}</p>
-            </div>
+        <div className="bg-white p-5 rounded-lg shadow-sm flex items-center gap-4 border border-gray-100">
+          <div className="p-3 rounded-full text-blue-500 bg-blue-100">
+            <Package size={24} />
           </div>
-        ))}
+          <div>
+            <p className="text-sm text-gray-500">Total</p>
+            <p className="text-2xl font-bold text-gray-800">{summary.total}</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-lg shadow-sm flex items-center gap-4 border border-gray-100">
+          <div className="p-3 rounded-full text-yellow-500 bg-yellow-100">
+            <Clock size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Pendentes</p>
+            <p className="text-2xl font-bold text-gray-800">{summary.pendentes}</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-lg shadow-sm flex items-center gap-4 border border-gray-100">
+          <div className="p-3 rounded-full text-green-500 bg-green-100">
+            <CheckCircle2 size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Resolvidos</p>
+            <p className="text-2xl font-bold text-gray-800">{summary.resolvidos}</p>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-lg shadow-sm flex items-center gap-4 border border-gray-100">
+          <div className="p-3 rounded-full text-red-500 bg-red-100">
+            <AlertCircle size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Urgentes</p>
+            <p className="text-2xl font-bold text-gray-800">{summary.urgentes}</p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center gap-4">
@@ -88,14 +199,14 @@ export default function Tickets() {
           type="text"
           placeholder="Buscar tickets..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
           className="flex-1 px-4 py-2 border border-gray-200 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500"
         />
-        <select value={status} onChange={e => setStatus(e.target.value)} className="px-4 py-2 border border-gray-200 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
-          {statusOptions.map(opt => <option key={opt}>{opt}</option>)}
+        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className="px-4 py-2 border border-gray-200 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
+          {statusOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
-        <select value={priority} onChange={e => setPriority(e.target.value)} className="px-4 py-2 border border-gray-200 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
-          {priorityOptions.map(opt => <option key={opt}>{opt}</option>)}
+        <select value={priority} onChange={e => { setPriority(e.target.value); setPage(1); }} className="px-4 py-2 border border-gray-200 rounded-md bg-white focus:ring-purple-500 focus:border-purple-500">
+          {priorityOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
         <button className="p-2.5 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 text-gray-600">
           <Filter size={18} />
@@ -116,32 +227,52 @@ export default function Tickets() {
             </tr>
           </thead>
           <tbody>
-            {tickets.map(ticket => (
+            {loading ? (
+              <tr><td colSpan={7} className="text-center py-8">Carregando...</td></tr>
+            ) : tickets.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-8">Nenhum ticket encontrado.</td></tr>
+            ) : tickets.map(ticket => (
               <tr key={ticket.id} className="border-b last:border-b-0 border-gray-100 hover:bg-gray-50/50">
-                <td className="px-4 py-3 font-semibold text-gray-700">{ticket.id}</td>
+                <td className="px-4 py-3 font-semibold text-gray-700">#{ticket.id}</td>
                 <td className="px-4 py-3">
-                  <div className="font-bold text-gray-800">{ticket.title}</div>
-                  <div className="text-gray-500 text-xs">{ticket.desc}</div>
+                  <div className="font-bold text-gray-800">{ticket.descricao}</div>
+                  <div className="text-gray-500 text-xs">{ticket.client || ''}</div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <img src={ticket.client.avatar} alt={ticket.client.name} className="w-9 h-9 rounded-full" />
+                    {ticket.criadoPor?.nome && (
+                      <span className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
+                        {ticket.criadoPor.nome[0]}
+                      </span>
+                    )}
                     <div>
-                      <div className="font-semibold text-gray-800 text-sm">{ticket.client.name}</div>
-                      <div className="text-xs text-gray-500">{ticket.client.email}</div>
+                      <div className="font-semibold text-gray-800 text-sm">{ticket.criadoPor?.nome || '-'}</div>
+                      <div className="text-xs text-gray-500">{ticket.criadoPor?.email || '-'}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${ticket.statusColor}`}>{ticket.status}</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(ticket.status)}`}>{getStatusLabel(ticket.status)}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${ticket.priorityColor}`}>{ticket.priority}</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(ticket.priority || '')}`}>{ticket.priority}</span>
                 </td>
-                <td className="px-4 py-3 text-gray-500 font-medium">{ticket.created}</td>
+                <td className="px-4 py-3 text-gray-500 font-medium">{new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</td>
                 <td className="px-4 py-3 text-center">
-                  <button className="p-2 text-gray-400 hover:text-purple-600"><Eye size={16} /></button>
-                  <button className="p-2 text-gray-400 hover:text-purple-600"><Edit size={16} /></button>
+                  <button
+                    className="p-2 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-purple-100 hover:border-purple-400 text-purple-500 hover:text-purple-700 transition-all duration-150 mr-1 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    onClick={() => openViewModal(ticket.id)}
+                    title="Visualizar"
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button
+                    className="p-2 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-blue-100 hover:border-blue-400 text-blue-500 hover:text-blue-700 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onClick={() => openEditModal(ticket.id)}
+                    title="Editar"
+                  >
+                    <Edit size={18} />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -150,15 +281,38 @@ export default function Tickets() {
       </div>
 
       <div className="flex justify-between items-center text-sm text-gray-600">
-        <span>Mostrando 1 a 10 de 97 resultados</span>
+        <span>Mostrando {tickets.length > 0 ? ((page - 1) * 10 + 1) : 0} a {((page - 1) * 10) + tickets.length} de {totalResults} resultados</span>
         <div className="flex items-center gap-1">
-          <button className="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft size={16}/></button>
-          <button className="px-3.5 py-1.5 rounded-md transition-colors bg-white border border-gray-200 text-gray-600">1</button>
-          <button className="px-3.5 py-1.5 rounded-md transition-colors bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold shadow-md">2</button>
-          <button className="px-3.5 py-1.5 rounded-md transition-colors bg-white border border-gray-200 text-gray-600">3</button>
-          <button className="p-2 rounded-md hover:bg-gray-200"><ChevronRight size={16}/></button>
+          <button className="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft size={16}/></button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i + 1}
+              className={`px-3.5 py-1.5 rounded-md transition-colors ${page === i + 1 ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold shadow-md' : 'bg-white border border-gray-200 text-gray-600'}`}
+              onClick={() => setPage(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button className="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}><ChevronRight size={16}/></button>
         </div>
       </div>
+
+      {/* Modal de Visualização/Edição */}
+      {modalOpen && selectedTicket && (
+        <Modal onClose={closeModal}>
+          <TicketForm
+            initialData={{
+              client: selectedTicket.client || '',
+              description: selectedTicket.descricao,
+              priority: (selectedTicket.priority === 'baixa' || selectedTicket.priority === 'média' || selectedTicket.priority === 'alta') ? selectedTicket.priority : 'média',
+              attendantId: selectedTicket.atendidoPor?.id || ''
+            }}
+            onSubmit={modalMode === 'edit' ? handleEditSubmit : () => {}}
+            onCancel={closeModal}
+            isLoading={modalMode === 'edit' ? loading : true}
+          />
+        </Modal>
+      )}
     </div>
   );
 } 

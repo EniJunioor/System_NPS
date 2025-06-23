@@ -35,6 +35,14 @@ const prisma = new PrismaClient();
  *                   type: integer
  *                 tokensUsed:
  *                   type: integer
+ *                 totalTickets:
+ *                   type: integer
+ *                 pendingTickets:
+ *                   type: integer
+ *                 resolvedTickets:
+ *                   type: integer
+ *                 urgentTickets:
+ *                   type: integer
  *       500:
  *         description: Erro interno do servidor
  */
@@ -55,11 +63,21 @@ router.get('/metrics', authenticateToken, async (req, res) => {
     const tokensGenerated = await prisma.token.count();
     const tokensUsed = await prisma.token.count({ where: { usado: true } });
 
+    // Novas métricas de tickets
+    const totalTickets = await prisma.ticket.count();
+    const pendingTickets = await prisma.ticket.count({ where: { status: 'ABERTO' } });
+    const resolvedTickets = await prisma.ticket.count({ where: { status: 'FINALIZADO' } });
+    const urgentTickets = await prisma.ticket.count({ where: { OR: [ { priority: 'alta' }, { priority: 'urgente' } ] } });
+
     res.json({
       totalUsers,
       activeUsers: activeUsersCount,
       tokensGenerated,
       tokensUsed,
+      totalTickets,
+      pendingTickets,
+      resolvedTickets,
+      urgentTickets
     });
   } catch (error) {
     console.error('Erro ao buscar métricas do dashboard:', error);

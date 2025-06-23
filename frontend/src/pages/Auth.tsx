@@ -5,7 +5,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { login, register, isLoading } = useAuthContext();
+  const { login, register } = useAuthContext();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -56,17 +56,21 @@ const Auth = () => {
           nome: formData.name,
           email: formData.email,
           senha: formData.password,
-          tipo: 'USER'
+          tipo: 'CLIENTE'
         });
       }
       
       if (result.success) {
         navigate('/dashboard');
       } else {
-        setErrors({ general: result.error });
+        setErrors({ general: result.error || 'Erro desconhecido' });
       }
-    } catch (error: any) {
-      setErrors({ general: error.message || 'Erro inesperado na autenticação' });
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrors({ general: error.message });
+      } else {
+        setErrors({ general: 'Erro inesperado na autenticação' });
+      }
     } finally {
       setIsSubmitting(false);
     }
