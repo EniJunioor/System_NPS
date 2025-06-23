@@ -160,8 +160,8 @@ model Avaliacao {
   createdAt   DateTime @default(now())
 
   // Relacionamentos
-  ticketId    String   @unique
-  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId    String?   @unique
+  ticket      Ticket?   @relation(fields: [ticketId], references: [id])
 
   @@map("avaliacoes")
 }

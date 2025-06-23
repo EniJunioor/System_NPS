@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FaStar } from 'react-icons/fa';
 import axios from 'axios';
 import type { FormEvent } from 'react';
+import { useParams } from 'react-router-dom';
 
 const EvaluationForm = () => {
   const [sistema, setSistema] = useState(0);
@@ -9,26 +10,37 @@ const EvaluationForm = () => {
   const [hoverSistema, setHoverSistema] = useState(0);
   const [hoverAtendimento, setHoverAtendimento] = useState(0);
   const [enviado, setEnviado] = useState(false);
+  const [comentario, setComentario] = useState('');
+  const { token } = useParams();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    console.log('Token enviado:', token);
+    
     try {
-      await axios.post('http://localhost:3001/api/avaliacoes', {
+      await axios.post('http://localhost:3001/avaliacoes', {
         sistema,
-        atendimento
+        atendimento,
+        comentario,
+        token
       });
       
       setEnviado(true);
       setSistema(0);
       setAtendimento(0);
+      setComentario('');
       
       setTimeout(() => {
         setEnviado(false);
       }, 3000);
     } catch (error) {
       console.error('Erro ao enviar avaliação:', error);
-      alert('Erro ao enviar avaliação. Tente novamente.');
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        alert('Erro ao enviar avaliação. Tente novamente.');
+      }
     }
   };
 
@@ -44,8 +56,8 @@ const EvaluationForm = () => {
       return (
         <FaStar
           key={index}
-          className="cursor-pointer text-2xl"
-          color={ratingValue <= (hoverValue || value) ? "#ffc107" : "#e4e5e9"}
+          className={`cursor-pointer text-4xl transition-transform duration-150 ${ratingValue <= (hoverValue || value) ? 'scale-110' : ''}`}
+          color={ratingValue <= (hoverValue || value) ? "#a855f7" : "#e4e5e9"}
           onMouseEnter={() => setHoverValue(ratingValue)}
           onMouseLeave={() => setHoverValue(0)}
           onClick={() => setValue(ratingValue)}
@@ -55,31 +67,41 @@ const EvaluationForm = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Avaliação NPS</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-gray-700 mb-2">Como você avalia o sistema?</label>
-          <div className="flex gap-2">
+    <div className="max-w-xl w-full mx-auto mt-16 p-10 bg-white rounded-3xl shadow-2xl flex flex-col items-center border border-gray-100">
+      <h2 className="text-3xl font-extralight mb-8 text-center text-gray-900 tracking-tight drop-shadow-sm">Avaliação NPS</h2>
+      <form onSubmit={handleSubmit} className="w-full space-y-8">
+        <div className="flex flex-col items-center gap-2">
+          <label className="block text-lg font-semibold text-gray-700 mb-2">Como você avalia o nosso sistema?</label>
+          <div className="flex gap-3">
             {renderStars(sistema, setSistema, hoverSistema, setHoverSistema)}
           </div>
         </div>
 
-        <div>
-          <label className="block text-gray-700 mb-2">Como você avalia o atendimento?</label>
-          <div className="flex gap-2">
+        <div className="flex flex-col items-center gap-2">
+          <label className="block text-lg font-semibold text-gray-700 mb-2">Como você avalia o atendimento?</label>
+          <div className="flex gap-3">
             {renderStars(atendimento, setAtendimento, hoverAtendimento, setHoverAtendimento)}
           </div>
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <label className="block text-lg text-gray-700 mb-2">Descrição <span className="text-gray-400 text-sm">(opcional)</span></label>
+          <textarea
+            className="w-full max-w-lg border border-gray-200 rounded-xl p-3 min-h-[90px] resize-none focus:ring-2 focus:ring-purple-300 focus:border-transparent bg-gray-50 text-gray-700 shadow-sm"
+            placeholder="Deixe seu comentário sobre o atendimento ou o sistema..."
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            maxLength={500}
+          />
         </div>
 
         <button
           type="submit"
           disabled={!sistema || !atendimento}
-          className={`w-full py-2 px-4 rounded-md text-white font-medium ${
+          className={`w-full py-3 px-4 rounded-xl text-white font-bold text-lg shadow-md transition-all duration-200 ${
             !sistema || !atendimento
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600'
           }`}
         >
           Enviar Avaliação
@@ -87,7 +109,7 @@ const EvaluationForm = () => {
       </form>
 
       {enviado && (
-        <div className="mt-4 p-3 bg-green-100 text-green-700 rounded-md text-center">
+        <div className="mt-8 p-4 bg-green-50 text-green-700 rounded-xl text-center text-lg font-semibold shadow-sm border border-green-200 animate-fade-in">
           Avaliação enviada com sucesso!
         </div>
       )}

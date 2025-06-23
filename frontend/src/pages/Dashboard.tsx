@@ -1,16 +1,15 @@
 import {
-  Bell,
-  Calendar,
   CheckSquare,
   Filter,
   Key,
   MessageCircle,
   Plus,
-  Search,
   Ticket,
   Users
 } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
 // Componente Net Promoter Score
 const NetPromoterScore = ({ score, total }: { score: number, total: number }) => {
@@ -86,6 +85,9 @@ const PerformanceChart = () => {
 };
 
 export default function Dashboard() {
+  const [dataInicial, setDataInicial] = useState('');
+  const [dataFinal, setDataFinal] = useState('');
+
   const stats = [
     { title: 'Total de Tickets', value: '1,247', change: '+12% vs mês anterior', icon: Ticket, color: 'text-purple-600', bgColor: 'bg-purple-100' },
     { title: 'Tarefas Concluídas', value: '892', change: '+8% vs mês anterior', icon: CheckSquare, color: 'text-green-500', bgColor: 'bg-green-100' },
@@ -96,7 +98,7 @@ export default function Dashboard() {
   const quickActions = [
     { title: 'Criar Ticket', path: '/tickets', icon: Plus, primary: true },
     { title: 'Gerar Token', path: '/token-generator', icon: Key, primary: false },
-    { title: 'Nova Tarefa', path: '/tasks', icon: CheckSquare, primary: false },
+    { title: 'Nova Tarefa', path: '/tarefas/nova', icon: CheckSquare, primary: false },
     { title: 'Abrir Chat', path: '/chat', icon: MessageCircle, primary: false },
   ];
   
@@ -116,7 +118,7 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 bg-gray-50 flex-1">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6 items-end">
         <div className="lg:col-span-1">
             <label className="text-sm font-medium text-gray-700">Atendente</label>
             <div className="relative mt-1">
@@ -128,15 +130,27 @@ export default function Dashboard() {
         <div>
             <label className="text-sm font-medium text-gray-700">Data Inicial</label>
             <div className="relative mt-1">
-                <input type="text" placeholder="dd/mm/aaaa" className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"/>
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
+                <input
+                  type="date"
+                  value={dataInicial}
+                  onChange={e => setDataInicial(e.target.value)}
+                  maxLength={8}
+                  className="w-full pl-3 pr-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-500 text-sm"
+                  style={{ colorScheme: 'light' }}
+                />
             </div>
         </div>
         <div>
             <label className="text-sm font-medium text-gray-700">Data Final</label>
             <div className="relative mt-1">
-                <input type="text" placeholder="dd/mm/aaaa" className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"/>
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
+                <input
+                  type="date"
+                  value={dataFinal}
+                  onChange={e => setDataFinal(e.target.value)}
+                  maxLength={8}
+                  className="w-full pl-3 pr-2 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all text-gray-500 text-sm"
+                  style={{ colorScheme: 'light' }}
+                />
             </div>
         </div>
         <div>
@@ -184,11 +198,15 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Ações Rápidas</h2>
           <div className="space-y-3">
             {quickActions.map((action) => (
-              <button key={action.title} className={`w-full flex items-center gap-3 p-4 rounded-lg text-left font-medium transition-all duration-300 transform hover:scale-105
-                ${action.primary ? 'bg-purple-600 text-white hover:bg-purple-700 shadow' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}>
+              <Link
+                key={action.title}
+                to={action.path}
+                className={`w-full flex items-center gap-3 p-4 rounded-lg text-left font-medium transition-all duration-300 transform hover:scale-105
+                  ${action.primary ? 'bg-purple-600 text-white hover:bg-purple-700 shadow' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+              >
                 <action.icon size={20}/>
                 {action.title}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

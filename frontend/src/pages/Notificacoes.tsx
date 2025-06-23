@@ -21,7 +21,7 @@ interface Notification {
     tags: string[];
 }
 
-export const allNotifications: Notification[] = [
+const initialNotifications: Notification[] = [
     { id: 1, type: 'system', title: 'Sistema em Manutenção', description: 'O sistema entrará em manutenção programada às 23:00 hoje. Duração estimada: 2 horas.', time: '2 min atrás', unread: true, tags: ['Sistema'] },
     { id: 2, type: 'ticket', title: 'Novo Ticket Atribuído', description: 'Ticket #2847 foi atribuído para você. Prioridade: Alta', time: '15 min atrás', unread: true, tags: ['Ticket', 'Ver ticket'] },
     { id: 3, type: 'task', title: 'Tarefa Concluída', description: 'A tarefa "Implementar autenticação JWT" foi marcada como concluída por João Santos.', time: '1 hora atrás', unread: false, tags: ['Tarefa', 'Ver detalhes'] },
@@ -52,22 +52,23 @@ const FilterButton: React.FC<FilterButtonProps> = ({ children, count, active, on
     </button>
 );
 
-
 export default function Notificacoes() {
     const [filter, setFilter] = useState('Todas');
     const [currentPage, setCurrentPage] = useState(1);
     const notificationsPerPage = 6;
+    const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+    const [modal, setModal] = useState<{ open: boolean, notification?: Notification } | null>(null);
 
     const getFilteredNotifications = () => {
         switch (filter) {
             case 'Não lidas':
-                return allNotifications.filter(n => n.unread);
+                return notifications.filter(n => n.unread);
             case 'Sistema':
-                return allNotifications.filter(n => n.type === 'system');
+                return notifications.filter(n => n.type === 'system');
             case 'Tickets':
-                return allNotifications.filter(n => n.type === 'ticket');
+                return notifications.filter(n => n.type === 'ticket');
             default:
-                return allNotifications;
+                return notifications;
         }
     };
     
@@ -85,10 +86,28 @@ export default function Notificacoes() {
     };
 
     const getCount = (type: string) => {
-        if (type === 'Todas') return allNotifications.length;
-        if (type === 'Não lidas') return allNotifications.filter(n => n.unread).length;
-        return allNotifications.filter(n => n.type.toLowerCase() === type.toLowerCase().slice(0, -1)).length;
+        if (type === 'Todas') return notifications.length;
+        if (type === 'Não lidas') return notifications.filter(n => n.unread).length;
+        return notifications.filter(n => n.type.toLowerCase() === type.toLowerCase().slice(0, -1)).length;
     }
+
+    // Marcar como lida individual
+    const marcarComoLida = (id: number) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+    };
+
+    // Marcar todas como lidas
+    const marcarTodasComoLidas = () => {
+        setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    };
+
+    // Abrir modal de detalhes
+    const verDetalhes = (notification: Notification) => {
+        setModal({ open: true, notification });
+    };
+
+    // Fechar modal
+    const fecharModal = () => setModal(null);
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -99,7 +118,10 @@ export default function Notificacoes() {
                     <p className="text-gray-500">Gerencie suas notificações e alertas</p>
                 </div>
                 <div className="flex items-center gap-4 mt-4 sm:mt-0">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:opacity-90 transition-all transform hover:scale-105 shadow-sm text-sm font-medium">
+                    <button
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:opacity-90 transition-all transform hover:scale-105 shadow-sm text-sm font-medium"
+                      onClick={marcarTodasComoLidas}
+                    >
                         <Check size={16}/> Marcar todas como lidas
                     </button>
                     <img src="https://i.pravatar.cc/150?u=maria" alt="Maria Silva" className="w-9 h-9 rounded-full" />
@@ -129,11 +151,25 @@ export default function Notificacoes() {
                                     const isAction = ['Ver ticket', 'Ver detalhes', 'Download', 'Marcar como lida'].includes(tag);
                                     const isTag = ['Sistema', 'Ticket', 'Tarefa', 'Relatório'].includes(tag);
 
-                                    if (isAction) return <a key={tag} href="#" className="text-purple-600 hover:underline font-medium">{tag}</a>
-                                    if (isTag) return <span key={tag} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">{tag}</span>
+                                    if (tag === 'Ver detalhes') return (
+                                        <button key={tag} className="text-purple-600 hover:underline font-medium" onClick={() => verDetalhes(notification)}>
+                                            {tag}
+                                        </button>
+                                    );
+                                    if (tag === 'Ver ticket') return (
+                                        <button key={tag} className="text-purple-600 hover:underline font-medium" onClick={() => verDetalhes(notification)}>
+                                            {tag}
+                                        </button>
+                                    );
+                                    if (isAction) return <button key={tag} className="text-purple-600 hover:underline font-medium">{tag}</button>;
+                                    if (isTag) return <span key={tag} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">{tag}</span>;
                                     return null;
                                 })}
-                                {notification.unread && <a href="#" className="text-purple-600 hover:underline font-medium">Marcar como lida</a>}
+                                {notification.unread && (
+                                    <button className="text-purple-600 hover:underline font-medium" onClick={() => marcarComoLida(notification.id)}>
+                                        Marcar como lida
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="flex-shrink-0 text-right">
@@ -167,6 +203,28 @@ export default function Notificacoes() {
                     </button>
                 </div>
             </div>
+
+            {/* Modal de detalhes */}
+            {modal?.open && (
+                <div className="fixed inset-0 bg-black/30 z-50 flex justify-center items-center backdrop-blur-md transition-opacity duration-300 animate-fade-in">
+                    <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md m-4 transform transition-all animate-fade-in-up">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4">Detalhes da Notificação</h2>
+                        <div className="text-gray-600 mb-6">
+                            <strong>{modal.notification?.title}</strong>
+                            <p className="mt-2">{modal.notification?.description}</p>
+                            <p className="mt-2 text-xs text-gray-400">{modal.notification?.time}</p>
+                        </div>
+                        <div className="flex justify-end gap-4">
+                            <button
+                                onClick={fecharModal}
+                                className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 } 

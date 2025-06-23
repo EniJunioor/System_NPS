@@ -145,8 +145,8 @@ router.post('/', validate(avaliacaoSchema), async (req, res, next) => {
 
   try {
     // Verificar se o token existe, é válido e não foi usado
-    const tokenInfo = await prisma.token.findUnique({
-      where: { valor: token },
+    const tokenInfo = await prisma.tokenAvaliacao.findUnique({
+      where: { token },
     });
 
     if (!tokenInfo) {
@@ -161,13 +161,13 @@ router.post('/', validate(avaliacaoSchema), async (req, res, next) => {
       return res.status(400).json({ error: 'Token expirado' });
     }
 
-    // Criar a avaliação vinculada ao ticket do token
+    // Criar a avaliação vinculada ao ticket do token, se houver
     const avaliacao = await prisma.avaliacao.create({
       data: {
         sistema,
         atendimento,
         comentario,
-        ticketId: tokenInfo.ticketId,
+        ...(tokenInfo.ticketId ? { ticketId: tokenInfo.ticketId } : {}),
       },
     });
 

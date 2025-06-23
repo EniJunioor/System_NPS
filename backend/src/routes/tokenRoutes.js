@@ -206,6 +206,7 @@ router.put('/:valor/usar', async (req, res) => {
 
     res.json({ message: 'Token marcado como usado', token: tokenAvaliacao });
   } catch (error) {
+    console.error('Erro ao marcar token como usado:', error);
     res.status(500).json({ error: 'Erro ao marcar token como usado' });
   }
 });

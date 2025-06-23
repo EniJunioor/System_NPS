@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Key, RefreshCw, Calendar } from 'lucide-react';
-import axios from 'axios';
+import { Key, RefreshCw, Calendar, Check } from 'lucide-react';
+import { api } from '../services/api';
 import { toast, Toaster } from 'react-hot-toast';
+import { useToast } from '../contexts/ToastContext';
+import type { AxiosError } from 'axios';
 
 // Este componente foi movido para fora para evitar recriação a cada renderização
 const InputField = ({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) => (
@@ -21,6 +23,12 @@ const TokenGenerator = () => {
     dataAtendimento: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const { showToast } = useToast();
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -52,15 +60,25 @@ const TokenGenerator = () => {
 
     setIsGenerating(true);
     try {
-      const response = await axios.post('http://localhost:3001/tokens', formData);
-      const evaluationLink = `${window.location.origin}/evaluate/${response.data.token}`;
+      const response = await api.post('/tokens', formData);
+      const evaluationLink = `${window.location.origin}/evaluate/${response.data.valor}`;
       
-      navigator.clipboard.writeText(evaluationLink);
+      setGeneratedToken(response.data.valor);
+      setGeneratedLink(evaluationLink);
+      setGeneratedAt(new Date());
+      setExpiresAt(response.data.expiraEm ? new Date(response.data.expiraEm) : null);
       toast.success('Token gerado e link copiado para a área de transferência!');
-      
-    } catch (err) {
-      toast.error('Erro ao gerar token. Tente novamente.');
+    } catch (error) {
+      const err = error as AxiosError;
       console.error(err);
+      if (err.response?.status === 401) {
+        showToast('error', 'Sessão expirada', 'Faça login novamente para gerar tokens.');
+      } else {
+        const errorMsg = (err.response?.data && typeof err.response.data === 'object' && 'error' in err.response.data)
+          ? (err.response.data as { error: string }).error
+          : 'Erro desconhecido';
+        showToast('error', 'Erro ao gerar token', errorMsg);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -72,13 +90,46 @@ const TokenGenerator = () => {
       atendente: '',
       dataAtendimento: '',
     });
+    setGeneratedToken(null);
+    setGeneratedLink(null);
   };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+    toast.success('Copiado para a área de transferência!');
+  };
+
+  // Log para debug
+  console.log('TOKEN:', generatedToken, 'LINK:', generatedLink);
+
+  // Função utilitária para encurtar o link
+  function shortenLink(link: string | null) {
+    if (!link) return '';
+    // Exibe os 25 primeiros e 8 últimos caracteres
+    if (link.length <= 40) return link;
+    return link.slice(0, 25) + '...' + link.slice(-8);
+  }
+
+  // Função utilitária para formatar data/hora
+  function formatDateTime(date: Date) {
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <Toaster position="top-center" />
-      <div className="max-w-md w-full">
-        <div className="bg-white p-8 sm:p-10 rounded-3xl shadow-xl space-y-8">
+      <div className="max-w-2xl w-full">
+        <div className="bg-white p-10 sm:p-14 rounded-3xl shadow-xl space-y-8">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-5 bg-gradient-to-r from-purple-500 to-blue-500 shadow-lg">
               <Key className="w-8 h-8 text-white" />
@@ -135,6 +186,45 @@ const TokenGenerator = () => {
               Limpar
             </button>
           </div>
+
+          {generatedToken && (
+            <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-2xl text-center space-y-3 max-w-2xl mx-auto">
+              {generatedLink && (
+                <>
+                  <div className="text-gray-800 text-base mb-2 font-medium">Link para avaliação:</div>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shortenLink(generatedLink)}
+                      className="w-full sm:w-[420px] px-4 py-2 border border-gray-300 rounded-lg text-gray-800 font-mono text-base bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300 text-center cursor-pointer select-all"
+                      onClick={e => (e.target as HTMLInputElement).select()}
+                      style={{ minWidth: '280px', maxWidth: '100%' }}
+                    />
+                    <button
+                      onClick={() => handleCopy(generatedLink)}
+                      className={`flex items-center gap-2 px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-base font-semibold transition-colors ml-0 sm:ml-2`}
+                    >
+                      {copied ? <Check size={20} className="text-green-300" /> : null}
+                      {copied ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-3">Token: <span className="font-mono">{generatedToken}</span></div>
+                  {(generatedAt || expiresAt) && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {generatedAt && (
+                        <span>Gerado em: {formatDateTime(generatedAt)}</span>
+                      )}
+                      {generatedAt && expiresAt && <span> &nbsp;|&nbsp; </span>}
+                      {expiresAt && (
+                        <span>Válido até: {formatDateTime(expiresAt)}</span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

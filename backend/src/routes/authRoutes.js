@@ -76,6 +76,8 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
       { expiresIn: '24h' }
     );
 
+    console.log('Token gerado no login:', token);
+
     const { senha: _, ...userWithoutPassword } = user;
 
     res.json({
