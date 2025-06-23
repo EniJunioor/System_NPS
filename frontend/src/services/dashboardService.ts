@@ -65,7 +65,7 @@ export interface RecentActivity {
     nome: string;
   };
   timestamp: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PerformanceMetrics {
@@ -189,11 +189,11 @@ export const dashboardService = {
       priority?: string;
       user?: string;
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const params = new URLSearchParams({
       reportType,
       ...(filters && Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined)
+        Object.entries(filters).filter(([, value]) => value !== undefined)
       ))
     });
 
@@ -205,13 +205,19 @@ export const dashboardService = {
   async exportDashboardReport(
     reportType: string,
     format: 'pdf' | 'excel' | 'csv',
-    filters?: any
+    filters?: {
+      dataInicio?: string;
+      dataFim?: string;
+      status?: string;
+      priority?: string;
+      user?: string;
+    }
   ): Promise<Blob> {
     const params = new URLSearchParams({
       reportType,
       format,
       ...(filters && Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== undefined)
+        Object.entries(filters).filter(([, value]) => value !== undefined)
       ))
     });
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Filter, Eye, Edit, Package, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ticketService } from '../services/ticketService';
 import { dashboardService } from '../services/dashboardService';
 import type { Ticket, TicketFormData } from '../types';
 import TicketForm from '../components/tickets/TicketForm';
 import Modal from '../components/layout/Modal';
+import { useNavigate } from 'react-router-dom';
 
 const statusOptions = [
   { label: 'Todos os status', value: '' },
@@ -41,7 +41,7 @@ export default function Tickets() {
     resolvidos: 0,
     urgentes: 0,
   });
- 
+  const navigate = useNavigate();
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -147,12 +147,13 @@ export default function Tickets() {
           <h1 className="text-3xl font-bold text-gray-800">Tickets</h1>
           <p className="text-gray-500">Gerencie seus tickets de suporte</p>
         </div>
-        <Link to="/tickets/novo">
-          <button className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 hover:scale-105 shadow-md cursor-pointer">
-            <Plus size={18} />
-            Novo Ticket
-          </button>
-        </Link>
+        <button
+          className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 hover:scale-105 shadow-md cursor-pointer"
+          onClick={() => navigate('/tickets/novo')}
+        >
+          <Plus size={18} />
+          Novo Ticket
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

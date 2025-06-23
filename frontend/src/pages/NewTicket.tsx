@@ -61,8 +61,7 @@ const CheckboxField = ({ label, ...props }: CheckboxFieldProps) => (
     </label>
 );
 
-
-export default function NewTicket() {
+export default function NewTicket({ onClose }: { onClose?: () => void }) {
   const [formData, setFormData] = useState({
     title: '',
     client: '',
@@ -82,7 +81,8 @@ export default function NewTicket() {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    navigate('/tickets');
+    if (onClose) onClose();
+    else navigate('/tickets');
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -108,7 +108,7 @@ export default function NewTicket() {
             <button onClick={handleBack} className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
               Cancelar
             </button>
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded-md hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
+            <button className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
               Criar Ticket
             </button>
           </div>
@@ -139,18 +139,19 @@ export default function NewTicket() {
 
           <FormSection title="Descrição do Problema">
             <div className="space-y-6">
-              <TextareaField label="Descrição Detalhada *" name="description" value={formData.description} onChange={handleChange} placeholder="Descreva detalhadamente o problema ou solicitação..." />
+              <TextareaField label="Descrição Detalhada" name="description" value={formData.description} onChange={handleChange} placeholder="Descreva detalhadamente o problema ou solicitação..." />
               <TextareaField label="Passos para Reproduzir" name="reproSteps" value={formData.reproSteps} onChange={handleChange} placeholder="Liste os passos necessários para reproduzir o problema..." />
               <TextareaField label="Resultado Esperado" name="expectedResult" value={formData.expectedResult} onChange={handleChange} placeholder="Descreva qual seria o comportamento esperado..." />
             </div>
           </FormSection>
 
           <FormSection title="Anexos">
-            <div className="group border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-transparent hover:bg-gradient-to-r from-purple-600 to-blue-600 bg-gray-50/50 transition-all duration-300">
-              <div className="flex flex-col items-center justify-center text-gray-500 group-hover:text-white">
-                <UploadCloud size={40} className="mb-2 text-gray-400 group-hover:text-white transition-colors" />
-                <p className="font-semibold text-blue-600 group-hover:text-white transition-colors">Clique para fazer upload ou arraste arquivos aqui</p>
-                <p className="text-xs group-hover:text-gray-200 transition-colors">PNG, JPG, PDF até 10MB cada</p>
+            <div className="group border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-transparent hover:bg-gray-50 transition-all duration-300">
+              <div className="flex flex-col items-center justify-center text-gray-500">
+                <UploadCloud size={40} className="mb-2 text-gray-400" />
+                <p className="font-semibold text-blue-600">Clique para fazer upload ou arraste arquivos aqui</p>
+                <p className="text-xs">PNG, JPG, PDF até 10MB cada</p>
+                <input type="file" multiple className="mt-4 mx-auto block" style={{ display: 'block' }} />
               </div>
             </div>
           </FormSection>
@@ -164,7 +165,7 @@ export default function NewTicket() {
                   </SelectField>
                   <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Prazo de Resolução</label>
-                      <input type="text" name="deadline" value={formData.deadline} onChange={handleChange} placeholder="dd/mm/aaaa" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
+                      <input type="date" name="deadline" value={formData.deadline} onChange={handleChange} placeholder="dd/mm/aaaa" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
                       <Calendar size={18} className="absolute right-3 top-9 text-gray-400" />
                   </div>
                   <div className="md:col-span-2">
@@ -178,16 +179,15 @@ export default function NewTicket() {
                   <CheckboxField label="Marcar como urgente" name="markUrgent" checked={formData.markUrgent} onChange={handleChange} />
                   <CheckboxField label="Atribuição automática baseada na categoria" name="autoAssign" checked={formData.autoAssign} onChange={handleChange} />
               </div>
+              <footer className="flex justify-end items-center gap-3 pt-4">
+                <button className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">
+                  Salvar como Rascunho
+                </button>
+                <button className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
+                  Criar Ticket
+                </button>
+              </footer>
           </FormSection>
-          
-          <footer className="flex justify-end items-center gap-3 pt-4">
-            <button className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">
-              Salvar como Rascunho
-            </button>
-            <button className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
-              + Criar Ticket
-            </button>
-          </footer>
         </main>
       </div>
     </div>
