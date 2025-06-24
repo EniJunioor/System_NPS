@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { useDashboard } from '../hooks/useDashboard';
 
 // Componente Net Promoter Score
 const NetPromoterScore = ({ score, total }: { score: number, total: number }) => {
@@ -85,15 +86,22 @@ const PerformanceChart = () => {
 };
 
 export default function Dashboard() {
-  const [dataInicial, setDataInicial] = useState('');
-  const [dataFinal, setDataFinal] = useState('');
-
-  const stats = [
-    { title: 'Total de Tickets', value: '1,247', change: '+12% vs mês anterior', icon: Ticket, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-    { title: 'Tarefas Concluídas', value: '892', change: '+8% vs mês anterior', icon: CheckSquare, color: 'text-green-500', bgColor: 'bg-green-100' },
-    { title: 'Tokens Gerados', value: '156', change: '-3% vs mês anterior', icon: Key, color: 'text-yellow-500', bgColor: 'bg-yellow-100' },
-    { title: 'Usuários Ativos', value: '2,847', change: '+15% vs mês anterior', icon: Users, color: 'text-orange-500', bgColor: 'bg-orange-100' },
-  ];
+  const {
+    isLoading,
+    error,
+    stats,
+    activities,
+    dataInicial,
+    setDataInicial,
+    dataFinal,
+    setDataFinal,
+    fetchStats,
+    fetchActivities,
+    fetchStatsByPeriod,
+    atendente,
+    setAtendente,
+    users,
+  } = useDashboard();
 
   const quickActions = [
     { title: 'Criar Ticket', path: '/tickets', icon: Plus, primary: true },
@@ -102,17 +110,19 @@ export default function Dashboard() {
     { title: 'Abrir Chat', path: '/chat', icon: MessageCircle, primary: false },
   ];
   
-  const recentActivities = [
-      { icon: Ticket, text: 'Novo ticket criado', subtext: 'Ticket #1247 - Problema de login', time: '2 min atrás', color: 'purple' },
-      { icon: CheckSquare, text: 'Tarefa concluída', subtext: 'Implementação da API de pagamentos', time: '1 hora atrás', color: 'green' },
-      { icon: Key, text: 'Token gerado', subtext: 'API Token para integração externa', time: '3 horas atrás', color: 'yellow' },
-  ];
+  useEffect(() => {
+    fetchStats();
+    fetchActivities();
+  }, []);
 
-  const activityColorClasses: { [key: string]: { bg: string; text: string } } = {
-    purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
-    green: { bg: 'bg-green-100', text: 'text-green-500' },
-    yellow: { bg: 'bg-yellow-100', text: 'text-yellow-500' },
+  const handleFilter = () => {
+    if (dataInicial && dataFinal) {
+      fetchStatsByPeriod(dataInicial, dataFinal);
+      fetchActivities();
+    }
   };
+
+  console.log('Usuários para filtro de atendente:', users);
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 flex-1">
@@ -122,8 +132,15 @@ export default function Dashboard() {
         <div className="lg:col-span-1">
             <label className="text-sm font-medium text-gray-700">Atendente</label>
             <div className="relative mt-1">
-                <select className="w-full pl-3 pr-10 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all">
-                    <option>Todos os atendentes</option>
+                <select
+                  className="w-full pl-3 pr-10 py-2 text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  value={atendente}
+                  onChange={e => setAtendente(e.target.value)}
+                >
+                  <option value="">Todos os atendentes</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>{user.name || user.nome} ({user.role})</option>
+                  ))}
                 </select>
             </div>
         </div>
@@ -157,6 +174,8 @@ export default function Dashboard() {
             <button
               className="w-full lg:w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:opacity-90 transition-all transform hover:scale-105 shadow-sm"
               style={{ backgroundImage: 'linear-gradient(to right, #2563eb, #9333ea)' }}
+              onClick={handleFilter}
+              disabled={isLoading}
             >
                 <Filter size={18}/>
                 Filtrar
@@ -166,25 +185,57 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        {stats.map((stat) => (
-          <div key={stat.title} className="bg-white p-5 rounded-xl border border-gray-200/80 flex justify-between items-center transition-all duration-300 hover:shadow-lg hover:border-purple-300/50">
-            <div>
-              <p className="text-sm text-gray-500">{stat.title}</p>
-              <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-              <p className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{stat.change}</p>
+        {isLoading && <div className="col-span-full text-center text-gray-500 py-4">Carregando...</div>}
+        {error && <div className="col-span-full text-center text-red-500 py-4">{error.message}</div>}
+        {!isLoading && !error && stats && (
+          <>
+            <div className="bg-white p-5 rounded-xl border border-gray-200/80 flex justify-between items-center transition-all duration-300 hover:shadow-lg hover:border-purple-300/50">
+              <div>
+                <p className="text-sm text-gray-500">Total de Tickets</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.tickets?.total ?? '-'}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-100">
+                <Ticket className="h-6 w-6 text-purple-600" />
+              </div>
             </div>
-            <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+            <div className="bg-white p-5 rounded-xl border border-gray-200/80 flex justify-between items-center transition-all duration-300 hover:shadow-lg hover:border-purple-300/50">
+              <div>
+                <p className="text-sm text-gray-500">Tarefas Concluídas</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.tasks?.concluidas ?? '-'}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-green-100">
+                <CheckSquare className="h-6 w-6 text-green-500" />
+              </div>
             </div>
-          </div>
-        ))}
+            <div className="bg-white p-5 rounded-xl border border-gray-200/80 flex justify-between items-center transition-all duration-300 hover:shadow-lg hover:border-purple-300/50">
+              <div>
+                <p className="text-sm text-gray-500">Tokens Gerados</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.tokens?.total ?? '-'}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-yellow-100">
+                <Key className="h-6 w-6 text-yellow-500" />
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-xl border border-gray-200/80 flex justify-between items-center transition-all duration-300 hover:shadow-lg hover:border-purple-300/50">
+              <div>
+                <p className="text-sm text-gray-500">Usuários Ativos</p>
+                <p className="text-2xl font-bold text-gray-800">{(stats.tickets?.abertos ?? 0) + (stats.tickets?.emAndamento ?? 0)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-orange-100">
+                <Users className="h-6 w-6 text-orange-500" />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-1 bg-white p-6 rounded-xl border border-gray-200/80 transition-all duration-300 hover:shadow-lg">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Net Promoter Score</h2>
-          <NetPromoterScore score={70} total={1247} />
+          {stats && (
+            <NetPromoterScore score={stats.avaliacoes?.npsScore ?? 0} total={stats.avaliacoes?.total ?? 0} />
+          )}
         </div>
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200/80 transition-all duration-300 hover:shadow-lg">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Performance dos Atendimentos</h2>
@@ -212,23 +263,28 @@ export default function Dashboard() {
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-200/80 transition-all duration-300 hover:shadow-lg">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Atividade Recente</h2>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => {
-              const colorClass = activityColorClasses[activity.color] || { bg: 'bg-gray-100', text: 'text-gray-500' };
-              return (
-                <div key={activity.text} className="flex items-center gap-4 p-2 rounded-lg transition-colors hover:bg-gray-50">
-                  <div className={`p-2 rounded-full ${colorClass.bg}`}>
-                      <activity.icon className={`h-5 w-5 ${colorClass.text}`}/>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{activity.text}</p>
-                    <p className="text-sm text-gray-500">{activity.subtext}</p>
-                  </div>
-                  <span className="text-sm text-gray-400">{activity.time}</span>
+          <ul className="divide-y divide-gray-100">
+            {isLoading && <li className="text-center text-gray-500 py-4">Carregando...</li>}
+            {error && <li className="text-center text-red-500 py-4">{error.message}</li>}
+            {!isLoading && !error && activities && activities.length > 0 && activities.map((activity, idx) => (
+              <li key={activity.id || idx} className="flex items-center gap-4 py-3">
+                <div className={`p-2 rounded-lg bg-gray-100`}>
+                  {activity.type === 'ticket' && <Ticket className="h-5 w-5 text-purple-600" />}
+                  {activity.type === 'task' && <CheckSquare className="h-5 w-5 text-green-500" />}
+                  {activity.type === 'token' && <Key className="h-5 w-5 text-yellow-500" />}
+                  {activity.type === 'avaliacao' && <MessageCircle className="h-5 w-5 text-blue-500" />}
                 </div>
-              )
-            })}
-          </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">{activity.action}</p>
+                  <p className="text-xs text-gray-500">{activity.description}</p>
+                </div>
+                <span className="text-xs text-gray-400">{new Date(activity.timestamp).toLocaleString('pt-BR')}</span>
+              </li>
+            ))}
+            {!isLoading && !error && activities && activities.length === 0 && (
+              <li className="text-center text-gray-400 py-4">Nenhuma atividade recente.</li>
+            )}
+          </ul>
         </div>
       </div>
     </div>

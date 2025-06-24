@@ -84,7 +84,7 @@ export interface PerformanceMetrics {
 export const dashboardService = {
   // Obter estatísticas gerais do dashboard
   async getDashboardStats(): Promise<DashboardStats> {
-    const response = await api.get('/dashboard/stats');
+    const response = await api.get('/dashboard/metrics');
     return response.data;
   },
 
@@ -96,7 +96,7 @@ export const dashboardService = {
 
   // Obter atividades recentes
   async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
-    const response = await api.get(`/dashboard/recent-activity?limit=${limit}`);
+    const response = await api.get(`/dashboard/activity/recent?limit=${limit}`);
     return response.data;
   },
 
