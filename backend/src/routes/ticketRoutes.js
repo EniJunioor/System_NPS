@@ -4,6 +4,19 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const validate = require('../middleware/validate');
 const { ticketSchema, updateTicketSchema } = require('../validators/ticketSchemas');
+const { sendEmail } = require('../services/emailService');
+
+/**
+ * Mapeamento de Categoria para Atendente (para atribuição automática)
+ * Em um sistema real, isso poderia vir do banco de dados.
+ * !! IMPORTANTE: Substitua os valores 'ID_ATENDENTE_X' pelos IDs reais dos seus usuários.
+ */
+const categoryToAgentMap = {
+  'DUVIDA': 'ID_ATENDENTE_DUVIDAS',
+  'INCIDENTE': 'ID_ATENDENTE_INCIDENTES',
+  'SOLICITACAO': 'ID_ATENDENTE_SOLICITACOES',
+  'MELHORIA': 'ID_ATENDENTE_MELHORIAS'
+};
 
 /**
  * @swagger
@@ -317,7 +330,17 @@ router.post('/', validate(ticketSchema), async (req, res, next) => {
   if (req.user.tipo !== 'ADMIN' && req.user.tipo !== 'GESTOR') {
     return res.status(403).json({ error: 'Apenas gestores ou administradores podem criar tickets' });
   }
-  const { titulo, descricao, categoria, tags, urgencia, anexos, data, hora, reproSteps, expectedResult, deadline, notifyClient, markUrgent, autoAssign, atendidoPorId } = req.body;
+  let { titulo, descricao, categoria, tags, urgencia, anexos, data, hora, reproSteps, expectedResult, deadline, notifyClient, markUrgent, autoAssign, atendidoPorId } = req.body;
+
+  // Lógica de atribuição automática
+  if (autoAssign) {
+    const assignedAgentId = categoryToAgentMap[categoria];
+    if (assignedAgentId && assignedAgentId !== 'ID_ATENDENTE_X') { // Verifica se o ID foi substituído
+      atendidoPorId = assignedAgentId;
+    } else {
+      atendidoPorId = null; // Se não houver regra ou o ID for um placeholder, fica não atribuído
+    }
+  }
 
   try {
     const ticket = await prisma.ticket.create({
@@ -359,6 +382,17 @@ router.post('/', validate(ticketSchema), async (req, res, next) => {
     await prisma.notification.createMany({
       data: notifications,
     });
+
+    // Enviar email se a opção estiver marcada
+    if (ticket.notifyClient) {
+      const criador = await prisma.user.findUnique({ where: { id: ticket.criadoPorId } });
+      if (criador && criador.email) {
+        const subject = `Ticket #${ticket.id} Criado: ${ticket.titulo}`;
+        const text = `Olá ${criador.nome},\n\nSeu ticket "${ticket.titulo}" foi criado com sucesso e está sendo processado.\n\nObrigado,\nEquipe de Suporte.`;
+        const html = `<p>Olá ${criador.nome},</p><p>Seu ticket "${ticket.titulo}" foi criado com sucesso e está sendo processado.</p><p>Obrigado,<br>Equipe de Suporte.</p>`;
+        await sendEmail(criador.email, subject, text, html);
+      }
+    }
 
     res.status(201).json(ticket);
   } catch (error) {
@@ -475,6 +509,17 @@ router.put('/:id', validate(updateTicketSchema), async (req, res, next) => {
           message: `Você foi atribuído ao Ticket #${ticket.id}: ${ticket.titulo}`,
         },
       });
+    }
+
+    // Enviar email de atualização se a opção estiver marcada
+    if (ticket.notifyClient) {
+      const criador = await prisma.user.findUnique({ where: { id: ticket.criadoPorId } });
+      if (criador && criador.email) {
+        const subject = `Ticket #${ticket.id} Atualizado: ${ticket.titulo}`;
+        const text = `Olá ${criador.nome},\n\nO seu ticket "${ticket.titulo}" foi atualizado. O status atual é: ${ticket.status}.\n\nPara mais detalhes, acesse o sistema.\n\nObrigado,\nEquipe de Suporte.`;
+        const html = `<p>Olá ${criador.nome},</p><p>O seu ticket "${ticket.titulo}" foi atualizado. O status atual é: <strong>${ticket.status}</strong>.</p><p>Para mais detalhes, acesse o sistema.</p><p>Obrigado,<br>Equipe de Suporte.</p>`;
+        await sendEmail(criador.email, subject, text, html);
+      }
     }
 
     res.json(ticket);
