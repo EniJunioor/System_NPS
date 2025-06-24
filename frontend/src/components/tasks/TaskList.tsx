@@ -4,6 +4,7 @@ import { ThemeContext } from '../../contexts/ThemeContext';
 import GradientButton from '../layout/GradientButton';
 import RedButton from '../layout/RedButton';
 import { useAuth } from '../../hooks/useAuth';
+import { Eye, Edit2, CheckCircle } from 'lucide-react';
 
 interface TaskListProps {
   tasks: Task[];
@@ -13,6 +14,7 @@ interface TaskListProps {
   isLoading?: boolean;
   users: Array<{ id: string; name: string; role: string }>;
   onTransfer: (taskId: string, responsavelId: string) => void;
+  onView?: (task: Task) => void;
 }
 
 const TaskList = ({ 
@@ -22,7 +24,8 @@ const TaskList = ({
   onStatusChange, 
   isLoading = false,
   users,
-  onTransfer
+  onTransfer,
+  onView
 }: TaskListProps) => {
   const { isDarkMode } = useContext(ThemeContext);
   const { user } = useAuth();
@@ -496,19 +499,29 @@ const TaskList = ({
 
                   {/* Botões de Ação */}
                   <div className="flex gap-2">
-                    <GradientButton
+                    <button
+                      title="Ver detalhes"
+                      className="p-2 rounded hover:bg-blue-100 text-blue-600"
+                      onClick={() => onView && onView(task)}
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      title="Editar"
+                      className="p-2 rounded hover:bg-yellow-100 text-yellow-600"
                       onClick={() => onEdit(task)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 transform transition-all duration-300 hover:scale-105 active:scale-95"
                     >
-                      ✏️ Editar
-                    </GradientButton>
-                    
-                    <RedButton
-                      onClick={() => onDelete(task.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 transform transition-all duration-300 hover:scale-105 active:scale-95"
-                    >
-                      🗑️ Excluir
-                    </RedButton>
+                      <Edit2 size={18} />
+                    </button>
+                    {task.status !== 'CONCLUIDA' && (
+                      <button
+                        title="Finalizar"
+                        className="p-2 rounded hover:bg-green-100 text-green-600"
+                        onClick={() => onStatusChange(task.id, 'CONCLUIDA')}
+                      >
+                        <CheckCircle size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

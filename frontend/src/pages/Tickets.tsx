@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Filter, Eye, Edit, Package, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ticketService } from '../services/ticketService';
 import { dashboardService } from '../services/dashboardService';

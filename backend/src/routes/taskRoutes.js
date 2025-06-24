@@ -204,8 +204,32 @@ router.get('/', async (req, res, next) => {
 
     const totalTasks = await prisma.task.count({ where });
 
+    // Mapeia os campos para o formato esperado pelo frontend
+    const mappedTasks = tasks.map(task => ({
+      id: task.id,
+      title: task.titulo || '',
+      description: task.descricao || '',
+      status: task.status || '',
+      statusColor: '', // O frontend pode calcular a cor
+      priority: task.prioridade || '',
+      priorityColor: '', // O frontend pode calcular a cor
+      dueDate: task.dataVencimento ? new Date(task.dataVencimento).toLocaleDateString('pt-BR') : '',
+      completed: task.status === 'CONCLUIDA',
+      completedDate: task.status === 'CONCLUIDA' && task.updatedAt ? new Date(task.updatedAt).toLocaleDateString('pt-BR') : undefined,
+      assignees: task.responsavel ? [task.responsavel.nome] : [],
+      duracao: task.duracao || '',
+      tag: task.tag || '',
+      sistema: task.sistema || '',
+      responsavelId: task.responsavelId || '',
+      videoUrl: task.videoUrl || '',
+      anexos: task.anexos || [],
+      criadoPor: task.criadoPor || null,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+    }));
+
     res.json({
-      tasks,
+      tasks: mappedTasks,
       totalPages: Math.ceil(totalTasks / limit),
       currentPage: parseInt(page, 10),
       totalTasks,

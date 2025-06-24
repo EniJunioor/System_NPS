@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, Calendar } from 'lucide-react';
 import { ticketService, api, uploadFiles } from '../services'; // Importe a instância da API e o serviço de upload
 import Modal from '../components/layout/Modal';
+import { useToast } from '../contexts/ToastContext';
 
 // Interface para o tipo de usuário que virá da API
 interface User {
@@ -150,6 +151,25 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
   const [clients, setClients] = useState<User[]>([]); // Para "Cliente"
   const [isTransferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const { showToast } = useToast();
+
+  // Para tags como select múltiplo invisível
+  const TAGS_OPTIONS = [
+    'BUG', 'DÚVIDA', 'MELHORIA', 'URGENTE', 'RETORNO', 'OUTRO'
+  ];
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // Sincroniza tags do formData com selectedTags
+  useEffect(() => {
+    if (formData.tags) {
+      setSelectedTags(formData.tags.split(',').map(t => t.trim()).filter(Boolean));
+    }
+  }, [formData.tags]);
+  // Atualiza formData.tags ao selecionar tags
+  const handleTagChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
+    setSelectedTags(options);
+    setFormData(prev => ({ ...prev, tags: options.join(',') }));
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -224,30 +244,47 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
     }
   };
 
+  const handleRemoveAnexo = (indexToRemove: number) => {
+    setFormData(prev => {
+      const anexoToRemove = prev.anexos[indexToRemove];
+
+      const newAnexos = prev.anexos.filter((_, index) => index !== indexToRemove);
+
+      // Se não for uma URL, também remove da lista de arquivos a serem upados
+      let newFilesToUpload = prev.filesToUpload;
+      if (!anexoToRemove.startsWith('http')) {
+        newFilesToUpload = prev.filesToUpload.filter(file => file.name !== anexoToRemove);
+      }
+      
+      return {
+        ...prev,
+        anexos: newAnexos,
+        filesToUpload: newFilesToUpload,
+      };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
       // 1. Fazer upload dos anexos primeiro
-      let uploadedFileUrls: string[] = formData.anexos.filter(anexo => anexo.startsWith('http')); // Mantém anexos já existentes
+      let uploadedFileUrls: string[] = formData.anexos.filter(anexo => anexo.startsWith('http'));
       if (formData.filesToUpload.length > 0) {
-        // Converte o array de Files para um FileList
         const dataTransfer = new DataTransfer();
         formData.filesToUpload.forEach(file => dataTransfer.items.add(file));
         const fileList = dataTransfer.files;
-
         const newUrls = await uploadFiles(fileList);
         uploadedFileUrls = [...uploadedFileUrls, ...newUrls];
       }
-
       const dataToSend: TicketPayload = {
         titulo: formData.title,
         descricao: formData.description,
         categoria: formData.category,
-        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+        tags: selectedTags,
         urgencia: formData.priority,
-        anexos: uploadedFileUrls, // Usa as URLs dos arquivos que foram uploadados
+        anexos: uploadedFileUrls,
         data: formData.data ? new Date(formData.data).toISOString() : new Date().toISOString(),
         hora: formData.hora ? new Date(`${formData.data}T${formData.hora}`).toISOString() : new Date().toISOString(),
         reproSteps: formData.reproSteps,
@@ -295,8 +332,10 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
 
       if (isEditMode && id) {
         await ticketService.updateTicket(id, dataToSend);
+        showToast('success', 'Ticket atualizado com sucesso!');
       } else {
         await ticketService.createTicket(dataToSend);
+        showToast('success', 'Ticket criado com sucesso!');
       }
       navigate('/tickets');
     } catch (error) {
@@ -428,22 +467,21 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
             <div className="group border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-transparent hover:bg-gray-50 transition-all duration-300">
               <div className="flex flex-col items-center justify-center text-gray-500">
                 <UploadCloud size={40} className="mb-2 text-gray-400" />
-                <p className="font-semibold text-blue-600">Clique para fazer upload ou arraste arquivos aqui</p>
-                <p className="text-xs">PNG, JPG, PDF até 10MB cada</p>
+                <p className="mb-2">Arraste e solte arquivos aqui ou clique para selecionar</p>
                 <input type="file" multiple className="hidden" id="file-upload" onChange={handleFileChange} />
-                <label htmlFor="file-upload" className="mt-4 cursor-pointer font-semibold text-blue-600">
-                    Clique para fazer upload ou arraste arquivos aqui
-                </label>
-
-                {formData.anexos && formData.anexos.length > 0 && (
-                  <ul className="mt-4 text-sm text-gray-700 list-disc list-inside">
-                    {formData.anexos.map((anexo: string, idx: number) => (
-                      <li key={idx} className="truncate">
-                        {anexo.startsWith('http') ? anexo.split('/').pop() : anexo}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <label htmlFor="file-upload" className="cursor-pointer px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-all">Selecionar arquivos</label>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                {formData.anexos.map((anexo, idx) => (
+                  <div key={anexo + idx} className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                    {anexo.startsWith('http') ? (
+                      <a href={anexo} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">Anexo {idx + 1}</a>
+                    ) : (
+                      <span className="text-xs">{anexo}</span>
+                    )}
+                    <button type="button" className="text-red-500 hover:text-red-700" onClick={() => handleRemoveAnexo(idx)}>x</button>
+                  </div>
+                ))}
               </div>
             </div>
           </FormSection>
@@ -462,11 +500,6 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Prazo de Resolução</label>
                       <input type="date" name="deadline" value={formData.deadline} onChange={handleChange} placeholder="dd/mm/aaaa" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"/>
                       <Calendar size={18} className="absolute right-3 top-9 text-gray-400" />
-                  </div>
-                  <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                      <input name="tags" value={formData.tags} onChange={handleChange} placeholder="Digite tags separadas por vírgula" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-                      <p className="text-xs text-gray-500 mt-1">Ex: login, api, integração</p>
                   </div>
               </div>
               <div className="space-y-4">
@@ -497,6 +530,16 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
                     </button>
                 )}
               </footer>
+          </FormSection>
+
+          <FormSection title="Tags">
+            {/* Campo visual igual, mas select múltiplo invisível para lógica */}
+            <input type="text" name="tags" value={selectedTags.join(',')} onChange={e => setFormData(prev => ({ ...prev, tags: e.target.value }))} placeholder="Separe por vírgula" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            <select multiple value={selectedTags} onChange={handleTagChange} style={{ display: 'none' }}>
+              {TAGS_OPTIONS.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
           </FormSection>
         </form>
 

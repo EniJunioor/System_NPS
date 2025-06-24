@@ -11,6 +11,7 @@ interface TaskFormProps {
   initialData?: TaskFormData;
   isLoading?: boolean;
   users: Array<{ id: string; name: string; role: string }>;
+  readOnly?: boolean;
 }
 
 const TaskForm = ({ 
@@ -18,7 +19,8 @@ const TaskForm = ({
   onCancel, 
   initialData, 
   isLoading = false, 
-  users
+  users,
+  readOnly = false
 }: TaskFormProps) => {
   const { isDarkMode } = useTheme();
   const [formData, setFormData] = useState<TaskFormData>(
@@ -164,7 +166,7 @@ const TaskForm = ({
           }`}
           placeholder="Ex: 2h, 45min, 1h30min"
           aria-describedby={errors.duracao ? 'duracao-error' : undefined}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || readOnly}
         />
         {errors.duracao && (
           <p id="duracao-error" className="mt-2 text-sm text-red-600 animate-shake" role="alert">
@@ -190,7 +192,7 @@ const TaskForm = ({
           }`}
           placeholder="Descreva detalhadamente a tarefa a ser executada..."
           aria-describedby={errors.descricao ? 'descricao-error' : undefined}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || readOnly}
         />
         <div className="flex justify-between items-center mt-2">
           <p className={`text-xs ${
@@ -225,7 +227,7 @@ const TaskForm = ({
           className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-300 ${
             isDarkMode ? 'border-gray-600 bg-gray-700 text-white hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
           }`}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || readOnly}
         >
           <option value="TREINAMENTO">🎓 Treinamento</option>
           <option value="IMPLANTACAO">🚀 Implantação</option>
@@ -258,7 +260,7 @@ const TaskForm = ({
           className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-300 ${
             isDarkMode ? 'border-gray-600 bg-gray-700 text-white hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
           }`}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || readOnly}
         >
           <option value="">Selecione um sistema (opcional)</option>
           <option value="CONTROLID">🔴 ControlID</option>
@@ -294,7 +296,7 @@ const TaskForm = ({
           className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-300 ${
             isDarkMode ? 'border-gray-600 bg-gray-700 text-white hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
           }`}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || readOnly}
         >
           <option value="">Selecione um responsável (opcional)</option>
           {users.map((user) => (
@@ -323,7 +325,7 @@ const TaskForm = ({
             }`}
             placeholder="https://exemplo.com/video"
             aria-describedby={errors.videoUrl ? 'videoUrl-error' : undefined}
-            disabled={isLoading || isSubmitting}
+            disabled={isLoading || isSubmitting || readOnly}
           />
           {errors.videoUrl && (
             <p id="videoUrl-error" className="mt-2 text-sm text-red-600 animate-shake" role="alert">
