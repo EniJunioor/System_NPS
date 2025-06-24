@@ -1,7 +1,7 @@
 import React, { useState, useEffect, type ChangeEvent, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, Calendar } from 'lucide-react';
-import { ticketService, api } from '../services'; // Importe a instância da API
+import { ticketService, api, uploadFiles } from '../services'; // Importe a instância da API e o serviço de upload
 import Modal from '../components/layout/Modal';
 
 // Interface para o tipo de usuário que virá da API
@@ -85,6 +85,7 @@ interface FormData {
   markUrgent: boolean;
   autoAssign: boolean;
   anexos: string[];
+  filesToUpload: File[];
   data: string;
   hora: string;
 }
@@ -137,6 +138,7 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
     markUrgent: false,
     autoAssign: false,
     anexos: [],
+    filesToUpload: [],
     ...getCurrentDateTime(), // Define data e hora atuais
   });
 
@@ -144,16 +146,22 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
   const { id } = useParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [users, setUsers] = useState<User[]>([]); // Estado para armazenar os usuários
+  const [users, setUsers] = useState<User[]>([]); // Para "Atribuir para"
+  const [clients, setClients] = useState<User[]>([]); // Para "Cliente"
   const [isTransferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>('');
 
   useEffect(() => {
-    // Busca os usuários da API
     const fetchUsers = async () => {
       try {
         const response = await api.get('/auth/users');
-        setUsers(response.data);
+        const allUsers: User[] = response.data;
+        setUsers(allUsers); // Todos os usuários para atribuição
+
+        // Filtra apenas os clientes para o campo "Cliente"
+        const clientUsers = allUsers.filter(user => user.role === 'CLIENTE');
+        setClients(clientUsers);
+
       } catch (err) {
         console.error('Erro ao buscar usuários:', err);
       }
@@ -181,6 +189,7 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
             markUrgent: !!ticket.markUrgent,
             autoAssign: !!ticket.autoAssign,
             anexos: Array.isArray(ticket.anexos) ? ticket.anexos : [],
+            filesToUpload: [],
             data: ticket.data ? ticket.data.split('T')[0] : '',
             hora: ticket.hora ? ticket.hora.split('T')[1]?.slice(0,5) : '',
           });
@@ -206,21 +215,39 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setFormData(prev => ({ ...prev, anexos: Array.from(files).map(f => f.name) }));
+      const fileList = Array.from(files);
+      setFormData(prev => ({
+        ...prev,
+        anexos: [...prev.anexos, ...fileList.map(f => f.name)],
+        filesToUpload: [...prev.filesToUpload, ...fileList]
+      }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
+      // 1. Fazer upload dos anexos primeiro
+      let uploadedFileUrls: string[] = formData.anexos.filter(anexo => anexo.startsWith('http')); // Mantém anexos já existentes
+      if (formData.filesToUpload.length > 0) {
+        // Converte o array de Files para um FileList
+        const dataTransfer = new DataTransfer();
+        formData.filesToUpload.forEach(file => dataTransfer.items.add(file));
+        const fileList = dataTransfer.files;
+
+        const newUrls = await uploadFiles(fileList);
+        uploadedFileUrls = [...uploadedFileUrls, ...newUrls];
+      }
+
       const dataToSend: TicketPayload = {
         titulo: formData.title,
         descricao: formData.description,
         categoria: formData.category,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
         urgencia: formData.priority,
-        anexos: formData.anexos,
+        anexos: uploadedFileUrls, // Usa as URLs dos arquivos que foram uploadados
         data: formData.data ? new Date(formData.data).toISOString() : new Date().toISOString(),
         hora: formData.hora ? new Date(`${formData.data}T${formData.hora}`).toISOString() : new Date().toISOString(),
         reproSteps: formData.reproSteps,
@@ -368,8 +395,9 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
               <InputField label="Título do Ticket" name="title" value={formData.title} onChange={handleChange} placeholder="Digite o título do ticket" />
               <SelectField label="Cliente" name="client" value={formData.client} onChange={handleChange}>
                 <option value="">Selecione um cliente</option>
-                <option value="1">Ana Silva</option>
-                <option value="2">João Santos</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
+                ))}
               </SelectField>
               <SelectField label="Categoria" name="category" value={formData.category} onChange={handleChange}>
                 <option value="">Selecione uma categoria</option>
@@ -402,11 +430,17 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
                 <UploadCloud size={40} className="mb-2 text-gray-400" />
                 <p className="font-semibold text-blue-600">Clique para fazer upload ou arraste arquivos aqui</p>
                 <p className="text-xs">PNG, JPG, PDF até 10MB cada</p>
-                <input type="file" multiple className="mt-4 mx-auto block" style={{ display: 'block' }} onChange={handleFileChange} />
+                <input type="file" multiple className="hidden" id="file-upload" onChange={handleFileChange} />
+                <label htmlFor="file-upload" className="mt-4 cursor-pointer font-semibold text-blue-600">
+                    Clique para fazer upload ou arraste arquivos aqui
+                </label>
+
                 {formData.anexos && formData.anexos.length > 0 && (
-                  <ul className="mt-2 text-xs text-gray-600">
+                  <ul className="mt-4 text-sm text-gray-700 list-disc list-inside">
                     {formData.anexos.map((anexo: string, idx: number) => (
-                      <li key={idx}>{anexo}</li>
+                      <li key={idx} className="truncate">
+                        {anexo.startsWith('http') ? anexo.split('/').pop() : anexo}
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -416,7 +450,6 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
 
           <FormSection title="Configurações Adicionais">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  {/* CAMPO CORRIGIDO */}
                   <SelectField label="Atribuir para" name="assignTo" value={formData.assignTo} onChange={handleChange}>
                       <option value="">Não atribuído</option>
                       {users.map((user) => (

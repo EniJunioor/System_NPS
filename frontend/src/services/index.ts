@@ -2,16 +2,17 @@
 export { API_CONFIG } from '../config/env';
 
 // Exportar instância da API
-export { api } from './api';
+export * from './api';
 
 // Exportar todos os serviços
-export { authService } from './authService';
-export { taskService } from './taskService';
-export { ticketService } from './ticketService';
-export { avaliacaoService } from './avaliacaoService';
-export { tokenService } from './tokenService';
-export { dashboardService } from './dashboardService';
-export { notificationService } from './notificationService';
+export * from './authService';
+export * from './taskService';
+export * from './ticketService';
+export * from './avaliacaoService';
+export * from './tokenService';
+export * from './dashboardService';
+export * from './notificationService';
+export * from './uploadService';
 
 // Exportar tipos dos serviços
 export type {
