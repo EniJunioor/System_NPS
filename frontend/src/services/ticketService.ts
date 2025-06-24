@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Ticket, TicketFormData } from '../types';
+import type { Ticket } from '../types';
 
 export interface TicketFilters {
   status?: 'ABERTO' | 'EM_ANDAMENTO' | 'FINALIZADO' | 'CANCELADO';
@@ -49,7 +49,7 @@ export interface TicketComment {
 
 export const ticketService = {
   // Criar novo ticket
-  async createTicket(data: TicketFormData): Promise<TicketResponse> {
+  async createTicket(data: Record<string, any>): Promise<TicketResponse> {
     const response = await api.post('/tickets', data);
     return response.data;
   },
@@ -79,7 +79,7 @@ export const ticketService = {
   },
 
   // Atualizar ticket
-  async updateTicket(id: string, data: Partial<TicketFormData>): Promise<TicketResponse> {
+  async updateTicket(id: string, data: Record<string, any>): Promise<TicketResponse> {
     const response = await api.put(`/tickets/${id}`, data);
     return response.data;
   },

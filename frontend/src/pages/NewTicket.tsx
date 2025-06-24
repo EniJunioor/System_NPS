@@ -1,6 +1,7 @@
-import React, { useState, type ChangeEvent, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, type ChangeEvent, type ReactNode } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, Calendar } from 'lucide-react';
+import { ticketService } from '../services';
 
 interface FormSectionProps {
   title: string;
@@ -61,12 +62,62 @@ const CheckboxField = ({ label, ...props }: CheckboxFieldProps) => (
     </label>
 );
 
-export default function NewTicket({ onClose }: { onClose?: () => void }) {
-  const [formData, setFormData] = useState({
+interface FormData {
+  title: string;
+  client: string;
+  category: string;
+  priority: string;
+  description: string;
+  reproSteps: string;
+  expectedResult: string;
+  assignTo: string;
+  deadline: string;
+  tags: string;
+  notifyClient: boolean;
+  markUrgent: boolean;
+  autoAssign: boolean;
+  anexos: string[];
+  data: string;
+  hora: string;
+}
+
+// Tipo para o payload de criação/edição de ticket
+type TicketPayload = {
+  titulo: string;
+  descricao: string;
+  categoria: string;
+  tags: string[];
+  urgencia: string;
+  anexos: string[];
+  data: string;
+  hora: string;
+  reproSteps: string;
+  expectedResult: string;
+  deadline: string | null;
+  notifyClient: boolean;
+  markUrgent: boolean;
+  autoAssign: boolean;
+  atendidoPorId: string | null;
+};
+
+// Adiciona uma função para obter a data e hora atuais formatadas
+const getCurrentDateTime = () => {
+    const now = new Date();
+    // Ajusta para o fuso horário local (ex: 'America/Sao_Paulo')
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zonedDate = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+
+    const data = zonedDate.toISOString().split('T')[0];
+    const hora = zonedDate.toTimeString().slice(0, 5);
+    return { data, hora };
+};
+
+export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     client: '',
-    category: '',
-    priority: '',
+    category: 'DUVIDA', // Valor padrão
+    priority: 'BAIXA',  // Valor padrão
     description: '',
     reproSteps: '',
     expectedResult: '',
@@ -76,9 +127,46 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
     notifyClient: false,
     markUrgent: false,
     autoAssign: false,
+    anexos: [],
+    ...getCurrentDateTime(), // Define data e hora atuais
   });
 
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      setIsEditMode(true);
+      setIsLoading(true);
+      ticketService.getTicketById(id)
+        .then(ticket => {
+          setFormData({
+            title: ticket.titulo || '',
+            client: ticket.client || '',
+            category: ticket.categoria || '',
+            priority: ticket.urgencia || '',
+            description: ticket.descricao || '',
+            reproSteps: ticket.reproSteps || '',
+            expectedResult: ticket.expectedResult || '',
+            assignTo: ticket.atendidoPorId || '',
+            deadline: ticket.deadline ? ticket.deadline.split('T')[0] : '',
+            tags: ticket.tags ? ticket.tags.join(',') : '',
+            notifyClient: !!ticket.notifyClient,
+            markUrgent: !!ticket.markUrgent,
+            autoAssign: !!ticket.autoAssign,
+            anexos: Array.isArray(ticket.anexos) ? ticket.anexos : [],
+            data: ticket.data ? ticket.data.split('T')[0] : '',
+            hora: ticket.hora ? ticket.hora.split('T')[1]?.slice(0,5) : '',
+          });
+        })
+        .catch(error => {
+          console.error("Failed to fetch ticket", error);
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [id]);
 
   const handleBack = () => {
     if (onClose) onClose();
@@ -91,6 +179,108 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setFormData(prev => ({ ...prev, anexos: Array.from(files).map(f => f.name) }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const dataToSend: TicketPayload = {
+        titulo: formData.title,
+        descricao: formData.description,
+        categoria: formData.category,
+        tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+        urgencia: formData.priority,
+        anexos: formData.anexos,
+        data: formData.data ? new Date(formData.data).toISOString() : new Date().toISOString(),
+        hora: formData.hora ? new Date(`${formData.data}T${formData.hora}`).toISOString() : new Date().toISOString(),
+        reproSteps: formData.reproSteps,
+        expectedResult: formData.expectedResult,
+        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
+        notifyClient: formData.notifyClient,
+        markUrgent: formData.markUrgent,
+        autoAssign: formData.autoAssign,
+        atendidoPorId: formData.assignTo || null,
+      };
+
+      // Validação simples dos campos obrigatórios
+      if (!dataToSend.titulo || dataToSend.titulo.length < 5) {
+        alert('Título é obrigatório e deve ter pelo menos 5 caracteres.');
+        setIsLoading(false);
+        return;
+      }
+      if (!dataToSend.descricao || dataToSend.descricao.length < 10) {
+        alert('Descrição é obrigatória e deve ter pelo menos 10 caracteres.');
+        setIsLoading(false);
+        return;
+      }
+      if (!dataToSend.categoria || !['DUVIDA','INCIDENTE','SOLICITACAO','MELHORIA'].includes(dataToSend.categoria)) {
+        alert('Categoria é obrigatória e deve ser uma das opções válidas.');
+        setIsLoading(false);
+        return;
+      }
+      if (!dataToSend.urgencia || !['BAIXA','MEDIA','ALTA','CRITICA'].includes(dataToSend.urgencia)) {
+        alert('Prioridade é obrigatória e deve ser uma das opções válidas.');
+        setIsLoading(false);
+        return;
+      }
+      if (!dataToSend.data || isNaN(Date.parse(dataToSend.data))) {
+        alert('Data é obrigatória e deve ser válida.');
+        setIsLoading(false);
+        return;
+      }
+      if (!dataToSend.hora || isNaN(Date.parse(dataToSend.hora))) {
+        alert('Hora é obrigatória e deve ser válida.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Payload enviado:', dataToSend);
+
+      if (isEditMode && id) {
+        await ticketService.updateTicket(id, dataToSend);
+      } else {
+        await ticketService.createTicket(dataToSend);
+      }
+      navigate('/tickets');
+    } catch (error) {
+      console.error('Erro ao salvar ticket', error);
+      // Define um tipo para o erro de validação do Joi
+      type JoiError = { message: string; path: (string | number)[] };
+      
+      // Melhora a verificação do tipo do erro
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as { response: { data?: { errors?: JoiError[], error?: string, messages?: string } } };
+        const responseData = axiosError.response.data;
+
+        if (responseData && responseData.messages) {
+           alert('Erro de validação:\n' + responseData.messages);
+        } else if (responseData && Array.isArray(responseData.errors)) {
+          // Exibe erros de validação do Joi (formato antigo, mantido por segurança)
+          const errorMessages = responseData.errors.map((err) => err.message).join('\n');
+          alert('Erro de validação:\n' + errorMessages);
+        } else if (responseData && responseData.error) {
+          alert('Erro ao salvar ticket: ' + responseData.error);
+        } else {
+           alert('Erro ao salvar ticket. Verifique os campos e tente novamente.');
+        }
+      } else {
+        alert('Ocorreu um erro inesperado. Tente novamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading && isEditMode) {
+    return <div>Carregando informações do ticket...</div>;
+  }
+
   return (
     <div className="p-6 bg-gray-50/50 min-h-full">
       <div className="max-w-7xl mx-auto">
@@ -100,21 +290,20 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">Novo Ticket</h1>
-              <p className="text-sm text-gray-500">Crie um novo ticket de suporte</p>
+              <h1 className="text-xl font-bold text-gray-800">{isEditMode ? 'Editar Ticket' : 'Novo Ticket'}</h1>
+              <p className="text-sm text-gray-500">{isEditMode ? `Editando o ticket #${id}` : 'Crie um novo ticket de suporte'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handleBack} className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
               Cancelar
             </button>
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
-              Criar Ticket
+            <button onClick={handleSubmit} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
+              {isEditMode ? 'Salvar Alterações' : 'Criar Ticket'}
             </button>
           </div>
         </header>
-        
-        <main className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <FormSection title="Informações Básicas">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputField label="Título do Ticket" name="title" value={formData.title} onChange={handleChange} placeholder="Digite o título do ticket" />
@@ -125,14 +314,17 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
               </SelectField>
               <SelectField label="Categoria" name="category" value={formData.category} onChange={handleChange}>
                 <option value="">Selecione uma categoria</option>
-                <option value="bug">Bug/Erro</option>
-                <option value="feature">Solicitação de Feature</option>
+                <option value="DUVIDA">Dúvida</option>
+                <option value="INCIDENTE">Incidente</option>
+                <option value="SOLICITACAO">Solicitação</option>
+                <option value="MELHORIA">Melhoria</option>
               </SelectField>
               <SelectField label="Prioridade" name="priority" value={formData.priority} onChange={handleChange}>
                 <option value="">Selecione a prioridade</option>
-                <option value="baixa">Baixa</option>
-                <option value="media">Média</option>
-                <option value="alta">Alta</option>
+                <option value="BAIXA">Baixa</option>
+                <option value="MEDIA">Média</option>
+                <option value="ALTA">Alta</option>
+                <option value="CRITICA">Crítica</option>
               </SelectField>
             </div>
           </FormSection>
@@ -151,7 +343,14 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
                 <UploadCloud size={40} className="mb-2 text-gray-400" />
                 <p className="font-semibold text-blue-600">Clique para fazer upload ou arraste arquivos aqui</p>
                 <p className="text-xs">PNG, JPG, PDF até 10MB cada</p>
-                <input type="file" multiple className="mt-4 mx-auto block" style={{ display: 'block' }} />
+                <input type="file" multiple className="mt-4 mx-auto block" style={{ display: 'block' }} onChange={handleFileChange} />
+                {formData.anexos && formData.anexos.length > 0 && (
+                  <ul className="mt-2 text-xs text-gray-600">
+                    {formData.anexos.map((anexo: string, idx: number) => (
+                      <li key={idx}>{anexo}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </FormSection>
@@ -180,15 +379,15 @@ export default function NewTicket({ onClose }: { onClose?: () => void }) {
                   <CheckboxField label="Atribuição automática baseada na categoria" name="autoAssign" checked={formData.autoAssign} onChange={handleChange} />
               </div>
               <footer className="flex justify-end items-center gap-3 pt-4">
-                <button className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">
-                  Salvar como Rascunho
+                <button className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" type="button" onClick={handleBack}>
+                  Cancelar
                 </button>
-                <button className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
-                  Criar Ticket
+                <button className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105" type="submit" disabled={isLoading}>
+                  {isLoading ? 'Salvando...' : (isEditMode ? 'Salvar Alterações' : 'Criar Ticket')}
                 </button>
               </footer>
           </FormSection>
-        </main>
+        </form>
       </div>
     </div>
   );

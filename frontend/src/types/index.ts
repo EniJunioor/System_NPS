@@ -30,16 +30,27 @@ export interface TaskFormData {
 
 export interface Ticket {
   id: string;
+  titulo?: string;
   descricao: string;
+  categoria?: string;
+  tags?: string[];
+  urgencia?: string;
+  anexos?: string[];
   data: string;
   hora: string;
-  status: 'ABERTO' | 'EM_ANDAMENTO' | 'FINALIZADO' | 'CANCELADO';
+  status: 'ABERTO' | 'EM_ANDAMENTO' | 'FINALIZADO' | 'CANCELADO' | 'AGUARDANDO_ATENDIMENTO' | 'AGUARDANDO_CLIENTE';
   criadoPor: User;
   atendidoPor?: User;
+  atendidoPorId?: string;
   createdAt: string;
   updatedAt: string;
-  priority?: string;
   client?: string;
+  reproSteps?: string;
+  expectedResult?: string;
+  deadline?: string;
+  notifyClient?: boolean;
+  markUrgent?: boolean;
+  autoAssign?: boolean;
 }
 
 export interface TicketFormData {

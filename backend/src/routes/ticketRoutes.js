@@ -317,7 +317,7 @@ router.post('/', validate(ticketSchema), async (req, res, next) => {
   if (req.user.tipo !== 'ADMIN' && req.user.tipo !== 'GESTOR') {
     return res.status(403).json({ error: 'Apenas gestores ou administradores podem criar tickets' });
   }
-  const { titulo, descricao, categoria, tags, urgencia, anexos, data, hora } = req.body;
+  const { titulo, descricao, categoria, tags, urgencia, anexos, data, hora, reproSteps, expectedResult, deadline, notifyClient, markUrgent, autoAssign, atendidoPorId } = req.body;
 
   try {
     const ticket = await prisma.ticket.create({
@@ -332,6 +332,13 @@ router.post('/', validate(ticketSchema), async (req, res, next) => {
         hora,
         status: 'ABERTO',
         criadoPorId: req.user.id,
+        atendidoPorId,
+        reproSteps,
+        expectedResult,
+        deadline,
+        notifyClient,
+        markUrgent,
+        autoAssign,
       },
     });
 
@@ -426,7 +433,7 @@ router.post('/', validate(ticketSchema), async (req, res, next) => {
  */
 router.put('/:id', validate(updateTicketSchema), async (req, res, next) => {
   const { id } = req.params;
-  const { titulo, descricao, categoria, tags, urgencia, anexos, data, hora, status, atendidoPorId } = req.body;
+  const { titulo, descricao, categoria, tags, urgencia, anexos, data, hora, status, atendidoPorId, reproSteps, expectedResult, deadline, notifyClient, markUrgent, autoAssign } = req.body;
 
   try {
     const ticketAntes = await prisma.ticket.findUnique({
@@ -450,6 +457,12 @@ router.put('/:id', validate(updateTicketSchema), async (req, res, next) => {
         hora,
         status,
         atendidoPorId,
+        reproSteps,
+        expectedResult,
+        deadline,
+        notifyClient,
+        markUrgent,
+        autoAssign,
       },
     });
 

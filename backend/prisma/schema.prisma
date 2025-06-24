@@ -126,6 +126,14 @@ model Ticket {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  // Novos campos opcionais para alinhar com o frontend
+  reproSteps      String?
+  expectedResult  String?
+  deadline        DateTime?
+  notifyClient    Boolean?
+  markUrgent      Boolean?
+  autoAssign      Boolean?
+
   // Relacionamentos
   criadoPorId String
   criadoPor   User           @relation("CriadoPor", fields: [criadoPorId], references: [id])

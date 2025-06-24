@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Filter, Eye, Edit, Package, Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ticketService } from '../services/ticketService';
 import { dashboardService } from '../services/dashboardService';
-import type { Ticket, TicketFormData } from '../types';
-import TicketForm from '../components/tickets/TicketForm';
+import type { Ticket } from '../types';
 import Modal from '../components/layout/Modal';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,7 +32,6 @@ export default function Tickets() {
   const [totalResults, setTotalResults] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'view' | 'edit' | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [summary, setSummary] = useState({
     total: 0,
@@ -81,32 +79,22 @@ export default function Tickets() {
     // eslint-disable-next-line
   }, [status, priority, search, page]);
 
-  const openEditModal = async (ticketId: string) => {
-    setModalMode('edit');
-    setModalOpen(true);
-    setLoading(true);
-    const ticket = await ticketService.getTicketById(ticketId);
-    setSelectedTicket(ticket);
-    setLoading(false);
-  };
   const openViewModal = async (ticketId: string) => {
-    setModalMode('view');
     setModalOpen(true);
     setLoading(true);
-    const ticket = await ticketService.getTicketById(ticketId);
-    setSelectedTicket(ticket);
-    setLoading(false);
+    try {
+      const ticket = await ticketService.getTicketById(ticketId);
+      setSelectedTicket(ticket);
+    } catch (error) {
+      console.error("Failed to fetch ticket for view modal", error);
+      // Idealmente, mostrar um toast/erro para o usuário
+    } finally {
+      setLoading(false);
+    }
   };
   const closeModal = () => {
     setModalOpen(false);
     setSelectedTicket(null);
-    setModalMode(null);
-  };
-  const handleEditSubmit = async (data: TicketFormData) => {
-    if (!selectedTicket) return;
-    await ticketService.updateTicket(selectedTicket.id, data);
-    closeModal();
-    fetchTickets();
   };
 
   // Utilitários para status/prioridade
@@ -256,7 +244,7 @@ export default function Tickets() {
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(ticket.status)}`}>{getStatusLabel(ticket.status)}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(ticket.priority || '')}`}>{ticket.priority}</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(ticket.urgencia || '')}`}>{ticket.urgencia}</span>
                 </td>
                 <td className="px-4 py-3 text-gray-500 font-medium">{new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</td>
                 <td className="px-4 py-3 text-center">
@@ -269,7 +257,7 @@ export default function Tickets() {
                   </button>
                   <button
                     className="p-2 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-blue-100 hover:border-blue-400 text-blue-500 hover:text-blue-700 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    onClick={() => openEditModal(ticket.id)}
+                    onClick={() => navigate(`/tickets/editar/${ticket.id}`)}
                     title="Editar"
                   >
                     <Edit size={18} />
@@ -298,20 +286,62 @@ export default function Tickets() {
         </div>
       </div>
 
-      {/* Modal de Visualização/Edição */}
+      {/* Modal de Visualização */}
       {modalOpen && selectedTicket && (
         <Modal onClose={closeModal}>
-          <TicketForm
-            initialData={{
-              client: selectedTicket.client || '',
-              description: selectedTicket.descricao,
-              priority: (selectedTicket.priority === 'baixa' || selectedTicket.priority === 'média' || selectedTicket.priority === 'alta') ? selectedTicket.priority : 'média',
-              attendantId: selectedTicket.atendidoPor?.id || ''
-            }}
-            onSubmit={modalMode === 'edit' ? handleEditSubmit : () => {}}
-            onCancel={closeModal}
-            isLoading={modalMode === 'edit' ? loading : true}
-          />
+          {loading ? (
+            <div className="p-8 text-center">Carregando...</div>
+          ) : (
+            <div className="p-6 bg-white rounded-lg shadow-xl w-full max-w-2xl">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Detalhes do Ticket #{selectedTicket.id}</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="font-semibold text-gray-600">Título/Descrição:</label>
+                  <p className="text-gray-800 bg-gray-50 p-2 rounded">{selectedTicket.descricao}</p>
+                </div>
+                <div>
+                  <label className="font-semibold text-gray-600">Cliente:</label>
+                  <p className="text-gray-800">{selectedTicket.client || 'Não informado'}</p>
+                </div>
+                 <div>
+                  <label className="font-semibold text-gray-600">Status:</label>
+                  <p>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(selectedTicket.status)}`}>
+                      {getStatusLabel(selectedTicket.status)}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="font-semibold text-gray-600">Prioridade:</label>
+                  <p>
+                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${getPriorityColor(selectedTicket.urgencia || '')}`}>
+                       {selectedTicket.urgencia || 'Não informada'}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="font-semibold text-gray-600">Atribuído a:</label>
+                  <p className="text-gray-800">{selectedTicket.atendidoPor?.nome || 'Não atribuído'}</p>
+                </div>
+                 <div>
+                  <label className="font-semibold text-gray-600">Criado por:</label>
+                  <p className="text-gray-800">{selectedTicket.criadoPor?.nome}</p>
+                </div>
+                 <div>
+                  <label className="font-semibold text-gray-600">Criado em:</label>
+                  <p className="text-gray-800">{new Date(selectedTicket.createdAt).toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
         </Modal>
       )}
     </div>

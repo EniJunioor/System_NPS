@@ -11,6 +11,12 @@ const ticketSchema = Joi.object({
   hora: Joi.date().iso().required(),
   status: Joi.string().valid('ABERTO', 'EM_ANDAMENTO', 'FINALIZADO', 'AGUARDANDO_ATENDIMENTO', 'AGUARDANDO_CLIENTE', 'CANCELADO'),
   atendidoPorId: Joi.string().uuid().allow(null),
+  reproSteps: Joi.string().allow('', null),
+  expectedResult: Joi.string().allow('', null),
+  deadline: Joi.date().iso().allow(null),
+  notifyClient: Joi.boolean().allow(null),
+  markUrgent: Joi.boolean().allow(null),
+  autoAssign: Joi.boolean().allow(null),
 });
 
 // Para o PUT, a maioria dos campos é opcional
@@ -25,6 +31,12 @@ const updateTicketSchema = Joi.object({
   hora: Joi.date().iso(),
   status: Joi.string().valid('ABERTO', 'EM_ANDAMENTO', 'FINALIZADO', 'AGUARDANDO_ATENDIMENTO', 'AGUARDANDO_CLIENTE', 'CANCELADO'),
   atendidoPorId: Joi.string().uuid().allow(null),
+  reproSteps: Joi.string().allow('', null),
+  expectedResult: Joi.string().allow('', null),
+  deadline: Joi.date().iso().allow(null),
+  notifyClient: Joi.boolean().allow(null),
+  markUrgent: Joi.boolean().allow(null),
+  autoAssign: Joi.boolean().allow(null),
 }).min(1); // Exige que pelo menos um campo seja fornecido para atualização
 
 module.exports = {

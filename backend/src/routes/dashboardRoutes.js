@@ -67,7 +67,12 @@ router.get('/metrics', authenticateToken, async (req, res) => {
     const totalTickets = await prisma.ticket.count();
     const pendingTickets = await prisma.ticket.count({ where: { status: 'ABERTO' } });
     const resolvedTickets = await prisma.ticket.count({ where: { status: 'FINALIZADO' } });
-    const urgentTickets = await prisma.ticket.count({ where: { OR: [ { priority: 'alta' }, { priority: 'urgente' } ] } });
+    const urgentTickets = await prisma.ticket.count({
+      where: {
+        urgencia: { in: ['ALTA', 'CRITICA'] },
+        status: { in: ['ABERTO', 'EM_ANDAMENTO'] }
+      }
+    });
 
     res.json({
       totalUsers,

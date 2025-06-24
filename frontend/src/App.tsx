@@ -18,11 +18,10 @@ import { ToastProvider } from './contexts/ToastContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { LoadingOverlay } from './components/layout/LoadingSpinner';
 import { useAuthContext } from './contexts/AuthContext';
-import NewTicket from './pages/NewTicket';
+import TicketFormPage from './pages/NewTicket';
 import NewTask from './pages/NewTask';
 import EvaluationForm from './components/evaluation/EvaluationForm';
 import TicketView from './pages/TicketView';
-import TicketEdit from './pages/TicketEdit';
 
 const PrivateRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isLoading } = useAuthContext();
@@ -46,9 +45,9 @@ function App() {
               <Route path="/tarefas" element={<PrivateRoute><Tasks /></PrivateRoute>} />
               <Route path="/tarefas/nova" element={<PrivateRoute><NewTask /></PrivateRoute>} />
               <Route path="/tickets" element={<PrivateRoute><Tickets /></PrivateRoute>} />
-              <Route path="/tickets/novo" element={<PrivateRoute><NewTicket /></PrivateRoute>} />
+              <Route path="/tickets/novo" element={<PrivateRoute><TicketFormPage /></PrivateRoute>} />
               <Route path="/tickets/:id" element={<PrivateRoute><TicketView /></PrivateRoute>} />
-              <Route path="/tickets/editar/:id" element={<PrivateRoute><TicketEdit /></PrivateRoute>} />
+              <Route path="/tickets/editar/:id" element={<PrivateRoute><TicketFormPage /></PrivateRoute>} />
               <Route path="/token-generator" element={<PrivateRoute><TokenGenerator /></PrivateRoute>} />
               <Route path="/configuracoes" element={<PrivateRoute><Config /></PrivateRoute>} />
               <Route path="/ajuda" element={<PrivateRoute><Ajuda /></PrivateRoute>} />
