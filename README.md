@@ -1,6 +1,6 @@
 # Sistema de Avaliação NPS
 
-Sistema completo para gerenciamento de tickets e avaliação NPS (Net Promoter Score) com frontend em React + TypeScript e backend em Node.js.
+Sistema completo para gerenciamento de tickets, tarefas e avaliação NPS (Net Promoter Score) com frontend em React + TypeScript e backend em Node.js.
 
 ## 🚀 Tecnologias
 
@@ -15,6 +15,7 @@ Sistema completo para gerenciamento de tickets e avaliação NPS (Net Promoter S
 - Zod (validação)
 - React Query
 - React Hot Toast
+- file-saver (exportação CSV)
 
 ### Backend
 - Node.js
@@ -23,6 +24,7 @@ Sistema completo para gerenciamento de tickets e avaliação NPS (Net Promoter S
 - Prisma (ORM)
 - PostgreSQL (NeonDB)
 - JWT (autenticação)
+- Nodemailer (e-mail)
 - Jest (testes)
 - Swagger (documentação)
 
@@ -36,7 +38,7 @@ Sistema completo para gerenciamento de tickets e avaliação NPS (Net Promoter S
 
 1. Clone o repositório:
 ```bash
-git clone [URL_DO_REPOSITÓRIO]
+git clone [URL_DO_REPOSITORIO]
 cd ava-nps
 ```
 
@@ -125,7 +127,7 @@ ava-nps/
 └── README.md
 ```
 
-## 🔐 Autenticação
+## 🔑 Autenticação
 
 O sistema utiliza JWT (JSON Web Tokens) para autenticação. Os tokens são enviados no header `Authorization` como `Bearer token`.
 
@@ -135,29 +137,40 @@ O projeto utiliza PostgreSQL com Prisma como ORM. O schema do banco inclui:
 
 - Usuários (ADMIN, GESTOR, ATENDENTE)
 - Tickets
+- Tarefas
 - Tokens
 - Avaliações
 - Tokens de Avaliação
 
+## ✨ Funcionalidades
+
+- [x] Autenticação de usuários (login, registro, roles)
+- [x] Gerenciamento de tickets (criação, edição, exclusão, upload de anexos, atribuição automática, transferência, finalização, filtros, busca, exportação CSV)
+- [x] Gerenciamento de tarefas (criação, edição, exclusão, filtros dinâmicos, busca, ordenação por coluna, visualização em lista/grid, exportação CSV, upload/remover anexos, feedback visual, tooltip, badges, indicação de atraso)
+- [x] Sistema de avaliação NPS (tokens, avaliações, dashboard)
+- [x] Notificações (toast, e-mail)
+- [x] Dashboard com estatísticas dinâmicas
+- [x] Modal reutilizável, formulários validados em tempo real
+- [x] Responsividade total e acessibilidade
+- [x] Documentação Swagger
+- [x] Testes automatizados
+
+### Novidades recentes
+- Exportação de tarefas para CSV
+- Exclusão de tarefas com confirmação
+- Ordenação por coluna nas tabelas
+- Tooltip de descrição
+- Visualização detalhada e ações rápidas
+- Correção de linter e tipagem TypeScript
+
 ## 🤝 Contribuição
 
 1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+2. Crie uma branch para sua feature (`git checkout -b feature/SuaFeature`)
+3. Commit suas mudanças (`git commit -m 'feat: SuaFeature'`)
+4. Push para a branch (`git push origin feature/SuaFeature`)
 5. Abra um Pull Request
 
 ## 📝 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## ✨ Funcionalidades
-
-- [x] Autenticação de usuários
-- [x] Gerenciamento de tickets
-- [x] Sistema de avaliação NPS
-- [x] Geração de tokens para avaliação
-- [x] Dashboard administrativo
-- [x] Documentação da API com Swagger
-- [x] Testes automatizados
-- [x] Interface responsiva 
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes. 

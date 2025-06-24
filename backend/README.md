@@ -1,6 +1,6 @@
 # Backend - Sistema de Avaliação NPS
 
-## Configuração do Banco de Dados
+## ⚙️ Configuração do Banco de Dados
 
 ### 1. Instalar Dependências
 ```bash
@@ -99,3 +99,25 @@ npm test
 - Um ticket pode ter um token de avaliação
 - Um ticket pode ter uma avaliação
 - Um token de avaliação pertence a um atendimento específico 
+
+## 🚀 Funcionalidades
+
+- Endpoints de autenticação (login, registro, JWT)
+- Endpoints de tickets (CRUD, upload de anexos, atribuição automática, transferência, finalização, filtros, busca, exportação CSV)
+- Endpoints de tarefas (CRUD, filtros dinâmicos, busca, ordenação, exportação CSV)
+- Endpoints de avaliação NPS (tokens, avaliações)
+- Notificações por e-mail (nodemailer)
+- Dashboard com estatísticas
+- Documentação Swagger
+- Testes automatizados (Jest)
+
+## 🆕 Novidades recentes
+- Exportação de tarefas para CSV
+- Exclusão de tarefas com confirmação
+- Ordenação por coluna nas tabelas
+- Notificações por e-mail ao atribuir responsável
+- Correção de payloads e alinhamento de dados com frontend
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. 

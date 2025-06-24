@@ -58,39 +58,21 @@
 
 ## 🚀 Funcionalidades
 
-### Sistema de Notificações
-- **Toast**: Posicionado no canto superior direito
-- **Auto-dismiss**: 5 segundos
-- **Tipos**: Success, Error, Warning, Info
-- **Responsivo**: Adapta-se a diferentes telas
+- Sistema de tickets: criação, edição, exclusão, upload de anexos, atribuição automática, transferência, finalização, filtros, busca, exportação CSV
+- Sistema de tarefas: criação, edição, exclusão, filtros dinâmicos, busca, ordenação por coluna, visualização em lista/grid, exportação CSV, upload/remover anexos, feedback visual, tooltip, badges, indicação de atraso
+- Sistema de avaliação NPS
+- Notificações (toast)
+- Dashboard dinâmico
+- Modal reutilizável, formulários validados em tempo real
+- Responsividade total e acessibilidade
 
-### Modal Reutilizável
-- **Backdrop**: Clicável para fechar
-- **Escape**: Tecla Escape para fechar
-- **Foco**: Automático no primeiro input
-- **Tamanhos**: sm, md, lg, xl
-
-### Validação de Formulários
-- **Tempo real**: Erros aparecem conforme digitação
-- **Visual**: Bordas vermelhas e mensagens de erro
-- **Acessibilidade**: aria-describedby para screen readers
-
-## ♿ Acessibilidade
-
-### Navegação por Teclado
-- **Tab**: Navegação completa entre elementos
-- **Enter**: Ativação de botões e links
-- **Escape**: Fechamento de modais
-
-### Screen Readers
-- **Labels**: Todos os inputs têm labels apropriados
-- **Aria-labels**: Botões e elementos interativos
-- **Roles**: Dialog, button, navigation
-
-### Contraste
-- **Cores**: Contraste adequado em todos os elementos
-- **Texto**: Legibilidade garantida
-- **Foco**: Indicadores visuais claros
+## 🆕 Novidades recentes
+- Exportação de tarefas para CSV
+- Exclusão de tarefas com confirmação
+- Ordenação por coluna nas tabelas
+- Tooltip de descrição
+- Visualização detalhada e ações rápidas
+- Correção de linter e tipagem TypeScript
 
 ## 🛠️ Tecnologias
 
