@@ -1,7 +1,15 @@
 import React, { useState, useEffect, type ChangeEvent, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UploadCloud, Calendar } from 'lucide-react';
-import { ticketService } from '../services';
+import { ticketService, api } from '../services'; // Importe a instância da API
+import Modal from '../components/layout/Modal';
+
+// Interface para o tipo de usuário que virá da API
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
 
 interface FormSectionProps {
   title: string;
@@ -98,6 +106,7 @@ type TicketPayload = {
   markUrgent: boolean;
   autoAssign: boolean;
   atendidoPorId: string | null;
+  status?: string;
 };
 
 // Adiciona uma função para obter a data e hora atuais formatadas
@@ -135,8 +144,23 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
   const { id } = useParams<{ id: string }>();
   const [isLoading, setIsLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [users, setUsers] = useState<User[]>([]); // Estado para armazenar os usuários
+  const [isTransferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<string>('');
 
   useEffect(() => {
+    // Busca os usuários da API
+    const fetchUsers = async () => {
+      try {
+        const response = await api.get('/auth/users');
+        setUsers(response.data);
+      } catch (err) {
+        console.error('Erro ao buscar usuários:', err);
+      }
+    };
+
+    fetchUsers();
+
     if (id) {
       setIsEditMode(true);
       setIsLoading(true);
@@ -259,7 +283,7 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
         const responseData = axiosError.response.data;
 
         if (responseData && responseData.messages) {
-           alert('Erro de validação:\n' + responseData.messages);
+            alert('Erro de validação:\n' + responseData.messages);
         } else if (responseData && Array.isArray(responseData.errors)) {
           // Exibe erros de validação do Joi (formato antigo, mantido por segurança)
           const errorMessages = responseData.errors.map((err) => err.message).join('\n');
@@ -267,11 +291,54 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
         } else if (responseData && responseData.error) {
           alert('Erro ao salvar ticket: ' + responseData.error);
         } else {
-           alert('Erro ao salvar ticket. Verifique os campos e tente novamente.');
+            alert('Erro ao salvar ticket. Verifique os campos e tente novamente.');
         }
       } else {
         alert('Ocorreu um erro inesperado. Tente novamente.');
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFinalizar = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      await ticketService.updateTicket(id, { status: 'FINALIZADO' });
+      alert('Atendimento finalizado com sucesso!');
+      navigate('/tickets');
+    } catch (error) {
+      console.error('Erro ao finalizar o ticket', error);
+      alert('Não foi possível finalizar o atendimento. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTransferir = () => {
+    if (users.length > 0) {
+      setSelectedUser(users[0].id); // Pré-seleciona o primeiro usuário
+    }
+    setTransferModalOpen(true);
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!id || !selectedUser) {
+      alert('Selecione um usuário para transferir o ticket.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await ticketService.updateTicket(id, { atendidoPorId: selectedUser });
+      // Atualiza o formulário com o novo usuário atribuído
+      setFormData(prev => ({ ...prev, assignTo: selectedUser }));
+      alert('Ticket transferido com sucesso!');
+      setTransferModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao transferir ticket:', error);
+      alert('Não foi possível transferir o ticket.');
     } finally {
       setIsLoading(false);
     }
@@ -293,14 +360,6 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
               <h1 className="text-xl font-bold text-gray-800">{isEditMode ? 'Editar Ticket' : 'Novo Ticket'}</h1>
               <p className="text-sm text-gray-500">{isEditMode ? `Editando o ticket #${id}` : 'Crie um novo ticket de suporte'}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleBack} className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
-              Cancelar
-            </button>
-            <button onClick={handleSubmit} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
-              {isEditMode ? 'Salvar Alterações' : 'Criar Ticket'}
-            </button>
           </div>
         </header>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -357,10 +416,14 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
 
           <FormSection title="Configurações Adicionais">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* CAMPO CORRIGIDO */}
                   <SelectField label="Atribuir para" name="assignTo" value={formData.assignTo} onChange={handleChange}>
                       <option value="">Não atribuído</option>
-                      <option value="1">Equipe de Suporte</option>
-                      <option value="2">Equipe de Desenvolvimento</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} ({user.role})
+                        </option>
+                      ))}
                   </SelectField>
                   <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Prazo de Resolução</label>
@@ -382,13 +445,68 @@ export default function TicketFormPage({ onClose }: { onClose?: () => void }) {
                 <button className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" type="button" onClick={handleBack}>
                   Cancelar
                 </button>
-                <button className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105" type="submit" disabled={isLoading}>
-                  {isLoading ? 'Salvando...' : (isEditMode ? 'Salvar Alterações' : 'Criar Ticket')}
-                </button>
+
+                {isEditMode ? (
+                  <>
+                    <button type="button" onClick={handleFinalizar} className="px-5 py-2.5 text-sm font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 shadow-sm transition-transform duration-200 hover:scale-105">
+                        Finalizar Atendimento
+                    </button>
+                    <button type="button" onClick={handleTransferir} className="px-5 py-2.5 text-sm font-semibold text-white bg-yellow-500 rounded-lg hover:bg-yellow-600 shadow-sm transition-transform duration-200 hover:scale-105">
+                        Transferir
+                    </button>
+                    <button type="submit" disabled={isLoading} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
+                        {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </>
+                ) : (
+                    <button type="submit" disabled={isLoading} className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:opacity-90 shadow-sm transition-transform duration-200 hover:scale-105">
+                        {isLoading ? 'Salvando...' : 'Criar Ticket'}
+                    </button>
+                )}
               </footer>
           </FormSection>
         </form>
+
+        {isTransferModalOpen && (
+          <Modal onClose={() => setTransferModalOpen(false)}>
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Transferir Ticket</h3>
+              <div className="mb-4">
+                <label htmlFor="user-select" className="block text-sm font-medium text-gray-700 mb-2">
+                  Selecione um novo responsável:
+                </label>
+                <select
+                  id="user-select"
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setTransferModalOpen(false)}
+                  className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmTransfer}
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:opacity-90 shadow-sm"
+                >
+                  {isLoading ? 'Transferindo...' : 'Confirmar Transferência'}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );
-} 
+}

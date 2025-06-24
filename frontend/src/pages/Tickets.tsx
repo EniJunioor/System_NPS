@@ -207,7 +207,7 @@ export default function Tickets() {
           <thead>
             <tr className="text-gray-500 text-xs font-semibold border-b border-gray-200">
               <th className="px-4 py-3 text-left">ID</th>
-              <th className="px-4 py-3 text-left">TÍTULO</th>
+              <th className="px-4 py-3 text-left">DESCRIÇÃO</th>
               <th className="px-4 py-3 text-left">CLIENTE</th>
               <th className="px-4 py-3 text-left">STATUS</th>
               <th className="px-4 py-3 text-left">PRIORIDADE</th>
