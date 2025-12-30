@@ -24,7 +24,7 @@ describe('Rotas de Tickets', () => {
       data: {
         nome: 'Admin Tickets',
         email: 'admin.tickets@test.com',
-        senha: await require('bcrypt').hash('password', 10),
+        senha: await require('bcryptjs').hash('password', 10),
         tipo: 'GESTOR',
       },
     });
@@ -33,7 +33,7 @@ describe('Rotas de Tickets', () => {
       data: {
         nome: 'Atendente Tickets',
         email: 'atendente.tickets@test.com',
-        senha: await require('bcrypt').hash('password', 10),
+        senha: await require('bcryptjs').hash('password', 10),
         tipo: 'ATENDENTE',
       },
     });

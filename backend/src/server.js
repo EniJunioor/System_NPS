@@ -11,14 +11,16 @@ const taskRoutes = require('./routes/taskRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const logRoutes = require('./routes/logRoutes');
 const { authenticateToken } = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
+const { loggingMiddleware } = require('./middleware/logging');
 require('dotenv').config();
 
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
@@ -34,12 +36,13 @@ app.use('/auth', authRoutes);
 app.use('/tokens', tokenRoutes);
 app.use('/avaliacoes', avaliacaoRoutes);
 
-// Rotas protegidas
-app.use('/tickets', authenticateToken, ticketRoutes);
-app.use('/tasks', authenticateToken, taskRoutes);
-app.use('/dashboard', authenticateToken, dashboardRoutes);
-app.use('/notifications', authenticateToken, notificationRoutes);
-app.use('/upload', authenticateToken, uploadRoutes);
+// Rotas protegidas com logging
+app.use('/tickets', authenticateToken, loggingMiddleware, ticketRoutes);
+app.use('/tasks', authenticateToken, loggingMiddleware, taskRoutes);
+app.use('/dashboard', authenticateToken, loggingMiddleware, dashboardRoutes);
+app.use('/notifications', authenticateToken, loggingMiddleware, notificationRoutes);
+app.use('/upload', authenticateToken, loggingMiddleware, uploadRoutes);
+app.use('/logs', authenticateToken, logRoutes);
 
 // Middleware de Erro Global
 app.use(errorHandler);

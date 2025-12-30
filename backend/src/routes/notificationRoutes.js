@@ -46,7 +46,7 @@ const prisma = new PrismaClient();
 router.get('/', authenticateToken, async (req, res) => {
   const { page = 1, limit = 10, read } = req.query;
   const where = {
-    userId: req.user.userId,
+      userId: req.user.id,
   };
 
   if (read !== undefined) {
@@ -111,7 +111,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Notificação não encontrada' });
     }
 
-    if (notification.userId !== req.user.userId) {
+    if (notification.userId !== req.user.id) {
       return res.status(403).json({ error: 'Não autorizado' });
     }
 

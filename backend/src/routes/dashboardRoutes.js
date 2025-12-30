@@ -140,8 +140,7 @@ router.get('/performance-data', authenticateToken, async (req, res) => {
     }, {});
 
     res.json(performanceData);
-  } catch (error)
-    {
+  } catch (error) {
     console.error('Erro ao buscar dados de performance:', error);
     res.status(500).json({ error: 'Erro ao buscar dados de performance' });
   }

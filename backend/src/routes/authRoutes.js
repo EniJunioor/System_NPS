@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('../middleware/auth');
@@ -12,6 +12,7 @@ const {
   changePasswordSchema,
   updateSettingsSchema,
 } = require('../validators/authSchemas');
+const LogService = require('../services/logService');
 const prisma = new PrismaClient();
 
 /**
@@ -79,6 +80,23 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     console.log('Token gerado no login:', token);
 
     const { senha: _, ...userWithoutPassword } = user;
+
+    // Registrar log de login
+    LogService.createLog({
+      userId: user.id,
+      action: 'LOGIN',
+      entity: 'Auth',
+      description: `${user.nome} (${user.email}) fez login no sistema`,
+      details: {
+        method: req.method,
+        path: req.path,
+        statusCode: 200,
+      },
+      ipAddress: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
+      userAgent: req.headers['user-agent'],
+    }).catch((error) => {
+      console.error('Erro ao registrar log de login:', error);
+    });
 
     res.json({
       user: userWithoutPassword,
@@ -165,6 +183,25 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
 
     const { senha: _, ...userWithoutPassword } = user;
 
+    // Registrar log de registro
+    LogService.createLog({
+      userId: user.id,
+      action: 'CREATE',
+      entity: 'User',
+      entityId: user.id,
+      description: `Novo usuário registrado: ${user.nome} (${user.email})`,
+      details: {
+        method: req.method,
+        path: req.path,
+        statusCode: 201,
+        userType: tipo,
+      },
+      ipAddress: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'],
+      userAgent: req.headers['user-agent'],
+    }).catch((error) => {
+      console.error('Erro ao registrar log de registro:', error);
+    });
+
     res.status(201).json({
       user: userWithoutPassword,
       token,
@@ -248,7 +285,7 @@ router.get('/users', authenticateToken, async (req, res, next) => {
 router.get('/me', authenticateToken, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       include: {
         settings: true,
       },
@@ -300,7 +337,7 @@ router.put('/profile', authenticateToken, validate(updateProfileSchema), async (
   const { nome, sobrenome, telefone } = req.body;
   try {
     const updatedUser = await prisma.user.update({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       data: {
         nome,
         sobrenome,
@@ -350,7 +387,7 @@ router.patch('/change-password', authenticateToken, validate(changePasswordSchem
   const { currentPassword, newPassword } = req.body;
 
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -364,7 +401,7 @@ router.patch('/change-password', authenticateToken, validate(changePasswordSchem
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
       data: { senha: hashedNewPassword },
     });
 
@@ -394,7 +431,7 @@ router.delete('/me', authenticateToken, async (req, res, next) => {
   try {
     // Adicionar lógica de exclusão em cascata ou anonimização se necessário
     await prisma.user.delete({
-      where: { id: req.user.userId },
+      where: { id: req.user.id },
     });
     res.status(200).json({ message: 'Conta excluída com sucesso' });
   } catch (error) {
@@ -439,7 +476,7 @@ router.put('/settings', authenticateToken, validate(updateSettingsSchema), async
   const { theme, timezone, language, notificationsOn } = req.body;
   try {
     const userSettings = await prisma.userSettings.upsert({
-      where: { userId: req.user.userId },
+      where: { userId: req.user.id },
       update: {
         theme,
         timezone,
@@ -447,7 +484,7 @@ router.put('/settings', authenticateToken, validate(updateSettingsSchema), async
         notificationsOn,
       },
       create: {
-        userId: req.user.userId,
+        userId: req.user.id,
         theme,
         timezone,
         language,

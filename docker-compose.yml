@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Banco de Dados PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: ava-nps-postgres
+    environment:
+      POSTGRES_DB: ava_nps
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ava-nps-network
+
+  # Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ava-nps-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ava_nps?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/ava_nps?schema=public
+      JWT_SECRET: ${JWT_SECRET:-sua_chave_secreta_jwt_super_segura_aqui_altere_em_producao}
+      PORT: 3001
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npm start"
+    networks:
+      - ava-nps-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ava-nps-frontend
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - ava-nps-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ava-nps-network:
+    driver: bridge
+

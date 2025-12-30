@@ -22,6 +22,7 @@ import TicketFormPage from './pages/NewTicket';
 import NewTask from './pages/NewTask';
 import EvaluationForm from './components/evaluation/EvaluationForm';
 import TicketView from './pages/TicketView';
+import Logs from './pages/Logs';
 
 const PrivateRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isLoading } = useAuthContext();
@@ -55,6 +56,7 @@ function App() {
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
               <Route path="/api" element={<PrivateRoute><Api /></PrivateRoute>} />
               <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
+              <Route path="/logs" element={<PrivateRoute><Logs /></PrivateRoute>} />
               <Route path="/evaluate/:token" element={<EvaluationForm />} />
             </Routes>
           </NotificationProvider>

@@ -5,75 +5,106 @@ Sistema completo para gerenciamento de tickets, tarefas e avaliação NPS (Net P
 ## 🚀 Tecnologias
 
 ### Frontend
-- React 18
-- TypeScript
-- Vite
-- React Router DOM
+- React 19
+- TypeScript 5.x
+- Vite 6.x
+- React Router DOM 7.x
 - Axios
-- TailwindCSS
-- React Hook Form
-- Zod (validação)
-- React Query
+- TailwindCSS 4.x
 - React Hot Toast
 - file-saver (exportação CSV)
+- Recharts (gráficos)
+- Lucide React (ícones)
 
 ### Backend
-- Node.js
-- Express
-- TypeScript
-- Prisma (ORM)
-- PostgreSQL (NeonDB)
+- Node.js 20+
+- Express 4.x
+- Prisma 6.x (ORM)
+- PostgreSQL 16+
 - JWT (autenticação)
 - Nodemailer (e-mail)
 - Jest (testes)
 - Swagger (documentação)
+- bcryptjs (hash de senhas)
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+
-- PostgreSQL (ou NeonDB)
+- Node.js 20+
+- PostgreSQL 16+ (ou NeonDB)
 - npm ou yarn
+- Docker e Docker Compose (opcional, para usar containers)
 
 ## 🔧 Instalação
+
+### Opção 1: Docker (Recomendado)
 
 1. Clone o repositório:
 ```bash
 git clone [URL_DO_REPOSITORIO]
-cd ava-nps
+cd System_NPS
 ```
 
-2. Instale as dependências do frontend:
+2. Configure as variáveis de ambiente:
+   - Copie `backend/.env.example` para `backend/.env` e configure
+   - Copie `frontend/.env.example` para `frontend/.env` e configure
+
+3. Inicie os containers:
 ```bash
-cd frontend
-npm install
+docker-compose up -d
 ```
 
-3. Instale as dependências do backend:
+A aplicação estará disponível em:
+- Frontend: http://localhost
+- Backend: http://localhost:3001
+- API Docs: http://localhost:3001/api-docs
+
+### Opção 2: Instalação Manual
+
+1. Clone o repositório:
 ```bash
-cd ../backend
-npm install
+git clone [URL_DO_REPOSITORIO]
+cd System_NPS
 ```
 
-4. Configure as variáveis de ambiente:
-
-No diretório `backend`, crie um arquivo `.env`:
-```env
-DATABASE_URL="sua_url_do_banco"
-DIRECT_URL="sua_direct_url_do_banco"
-JWT_SECRET="seu_segredo_jwt"
-PORT=3001
-```
-
-No diretório `frontend`, crie um arquivo `.env`:
-```env
-VITE_API_URL=http://localhost:3001
-```
-
-5. Execute as migrações do banco de dados:
+2. Instale as dependências do backend:
 ```bash
 cd backend
-npx prisma migrate dev
+npm install
 ```
+
+3. Configure as variáveis de ambiente:
+   - Copie `backend/.env.example` para `backend/.env` e configure:
+   ```env
+   DATABASE_URL="postgresql://usuario:senha@localhost:5432/ava_nps?schema=public"
+   DIRECT_URL="postgresql://usuario:senha@localhost:5432/ava_nps?schema=public"
+   JWT_SECRET="sua_chave_secreta_jwt_super_segura_aqui"
+   PORT=3001
+   NODE_ENV=development
+   ```
+
+4. Configure o banco de dados:
+```bash
+# Criar banco de dados
+createdb ava_nps
+
+# Executar migrações
+npx prisma migrate dev
+
+# Gerar cliente Prisma
+npx prisma generate
+```
+
+5. Instale as dependências do frontend:
+```bash
+cd ../frontend
+npm install
+```
+
+6. Configure as variáveis de ambiente do frontend:
+   - Copie `frontend/.env.example` para `frontend/.env`:
+   ```env
+   VITE_API_URL=http://localhost:3001
+   ```
 
 ## 🚀 Executando o projeto
 
@@ -152,8 +183,11 @@ O projeto utiliza PostgreSQL com Prisma como ORM. O schema do banco inclui:
 - [x] Dashboard com estatísticas dinâmicas
 - [x] Modal reutilizável, formulários validados em tempo real
 - [x] Responsividade total e acessibilidade
+- [x] **Sistema de logs completo** - Registra todas as ações dos usuários
 - [x] Documentação Swagger
 - [x] Testes automatizados
+- [x] **Docker e Docker Compose** - Containerização completa
+- [x] **Documentação completa** - Frontend e Backend
 
 ### Novidades recentes
 - Exportação de tarefas para CSV

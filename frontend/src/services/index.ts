@@ -13,6 +13,7 @@ export * from './tokenService';
 export * from './dashboardService';
 export * from './notificationService';
 export * from './uploadService';
+export * from './logService';
 
 // Exportar tipos dos serviços
 export type {
@@ -68,4 +69,10 @@ export type {
   NotificationStats,
   NotificationsResponse,
   NotificationPreferences,
-} from './notificationService'; 
+} from './notificationService';
+
+export type {
+  Log,
+  LogFilters,
+  LogsResponse,
+} from './logService'; 

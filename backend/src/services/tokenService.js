@@ -55,8 +55,9 @@ class TokenService {
 
   // Gera link de avaliação
   static gerarLinkAvaliacao(token) {
-    // Usar a URL do frontend (porta 5173 para Vite)
-    return `http://localhost:5173/evaluate/${token}`;
+    // Usar a URL do frontend configurada via variável de ambiente
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return `${frontendUrl}/evaluate/${token}`;
   }
 }
 
